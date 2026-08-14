@@ -32,9 +32,9 @@
                 <span class="nav-icon">👟</span>
                 <span class="nav-label">Step Tracking</span>
             </a>
-            <a href="{{ url_for('dashboard') }}#overview-section" class="nav-item">
+            <a href="{{ url_for('water_page') }}" class="nav-item">
                 <span class="nav-icon">💧</span>
-                <span class="nav-label">Hydration</span>
+                <span class="nav-label">Water Tracking</span>
             </a>
             <a href="{{ url_for('dashboard') }}#overview-section" class="nav-item">
                 <span class="nav-icon">🌙</span>
@@ -76,9 +76,9 @@
             <span class="mobile-nav-icon highlight">➕</span>
             <span class="mobile-nav-text">Log</span>
         </button>
-        <a href="#step-charts-section" class="mobile-nav-item">
-            <span class="mobile-nav-icon">📈</span>
-            <span class="mobile-nav-text">Trends</span>
+        <a href="{{ url_for('water_page') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">💧</span>
+            <span class="mobile-nav-text">Water</span>
         </a>
         <a href="{{ url_for('logout') }}" class="mobile-nav-item">
             <span class="mobile-nav-icon">🚪</span>

@@ -1,6 +1,6 @@
 /**
  * HealthTrack AI - Client-Side JavaScript
- * Step 5: Step Tracking Module, Radial Ring, Weekly/Monthly Chart Switching, and Modals
+ * Step 6: Water Tracking Module, Liquid Bottle Gauge, Chart.js Integrations, and Modals
  */
 
 /* =============================================================================
@@ -71,7 +71,7 @@ function switchModalTab(tabName) {
 
 
 /* =============================================================================
-   3. STEP TRACKING DEDICATED MODAL CONTROLLER (STEP 5)
+   3. STEP TRACKING MODAL CONTROLLER (STEP 5)
    ============================================================================= */
 function openStepModal(tabName = 'add') {
     const modal = document.getElementById('stepActionModal');
@@ -121,6 +121,56 @@ function switchStepModalTab(tabName) {
     }
 }
 
+
+/* =============================================================================
+   4. WATER TRACKING MODAL CONTROLLER (STEP 6)
+   ============================================================================= */
+function openWaterModal(tabName = 'custom') {
+    const modal = document.getElementById('waterActionModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    switchWaterModalTab(tabName);
+}
+
+function closeWaterModal() {
+    const modal = document.getElementById('waterActionModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function switchWaterModalTab(tabName) {
+    const tabFormMap = {
+        'custom': 'form-custom-water',
+        'goal': 'form-goal-water'
+    };
+
+    const tabBtnMap = {
+        'custom': 'water-tab-custom',
+        'goal': 'water-tab-goal'
+    };
+
+    document.querySelectorAll('.water-modal-pane').forEach(pane => {
+        pane.style.display = 'none';
+    });
+
+    document.querySelectorAll('#waterActionModal .modal-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    const targetFormId = tabFormMap[tabName] || 'form-custom-water';
+    const targetForm = document.getElementById(targetFormId);
+    if (targetForm) {
+        targetForm.style.display = 'block';
+    }
+
+    const targetBtnId = tabBtnMap[tabName] || 'water-tab-custom';
+    const targetBtn = document.getElementById(targetBtnId);
+    if (targetBtn) {
+        targetBtn.classList.add('active');
+    }
+}
+
 // Window click-outside dismiss for all modals
 window.addEventListener('click', (e) => {
     const quickModal = document.getElementById('quickLogModal');
@@ -131,11 +181,15 @@ window.addEventListener('click', (e) => {
     if (stepModal && e.target === stepModal) {
         closeStepModal();
     }
+    const waterModal = document.getElementById('waterActionModal');
+    if (waterModal && e.target === waterModal) {
+        closeWaterModal();
+    }
 });
 
 
 /* =============================================================================
-   4. STEP MODULE WEEKLY VS MONTHLY CHART.JS SWITCHER (STEP 5)
+   5. STEP MODULE WEEKLY VS MONTHLY CHART.JS SWITCHER (STEP 5)
    ============================================================================= */
 let stepTrendChartInstance = null;
 let stepPayloadData = null;
@@ -149,7 +203,6 @@ function renderStepTrendChart(period = 'weekly') {
     const chartConfig = isWeekly ? stepPayloadData.weekly : stepPayloadData.monthly;
     const goalValue = stepPayloadData.goal || 10000;
 
-    // Update UI Titles
     const titleEl = document.getElementById('chart-dynamic-title');
     const subEl = document.getElementById('chart-dynamic-sub');
     const badgeEl = document.getElementById('chart-period-badge');
@@ -158,7 +211,6 @@ function renderStepTrendChart(period = 'weekly') {
     if (subEl) subEl.textContent = isWeekly ? `Daily step counts vs ${goalValue.toLocaleString()} daily target` : `30-day walking progress vs ${goalValue.toLocaleString()} daily target`;
     if (badgeEl) badgeEl.textContent = isWeekly ? '7-Day History' : '30-Day History';
 
-    // Gradients
     const emeraldGrad = ctx.createLinearGradient(0, 0, 0, 300);
     emeraldGrad.addColorStop(0, 'rgba(16, 185, 129, 0.9)');
     emeraldGrad.addColorStop(1, 'rgba(16, 185, 129, 0.25)');
@@ -237,10 +289,10 @@ function showChartPeriod(period) {
 
 
 /* =============================================================================
-   5. DOM INITIALIZATION
+   6. DOM INITIALIZATION & CHART.JS MOUNTING
    ============================================================================= */
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("⚡ HealthTrack AI (Step Tracking & Charts) initialized.");
+    console.log("⚡ HealthTrack AI (Modules & Visualizations) active.");
 
     // Auto-dismiss Alerts
     const flashAlerts = document.querySelectorAll('.alert');
@@ -253,6 +305,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 6000);
     });
 
+    // Theme Defaults
+    Chart.defaults.color = '#9ca3af';
+    Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+    Chart.defaults.font.size = 12;
+
+    const commonGridOptions = {
+        color: 'rgba(255, 255, 255, 0.06)',
+        drawBorder: false
+    };
+
     // 1. Initialize Step Module Specific Chart
     const stepPayloadEl = document.getElementById('step-chart-payload');
     if (stepPayloadEl) {
@@ -264,29 +326,78 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 2. Initialize General Dashboard Charts
+    // 2. Initialize Water Module Specific Chart (Step 6)
+    const waterPayloadEl = document.getElementById('water-chart-payload');
+    const waterTrendCanvas = document.getElementById('waterTrendChart');
+    if (waterPayloadEl && waterTrendCanvas) {
+        try {
+            const waterPayload = JSON.parse(waterPayloadEl.textContent);
+            const ctx = waterTrendCanvas.getContext('2d');
+            const cyanGradient = ctx.createLinearGradient(0, 0, 0, 300);
+            cyanGradient.addColorStop(0, 'rgba(6, 182, 212, 0.9)');
+            cyanGradient.addColorStop(1, 'rgba(6, 182, 212, 0.25)');
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: waterPayload.labels,
+                    datasets: [{
+                        label: 'Hydration Intake (ml)',
+                        data: waterPayload.data,
+                        backgroundColor: cyanGradient,
+                        borderColor: '#06b6d4',
+                        borderWidth: 1.5,
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#111827',
+                            titleColor: '#f9fafb',
+                            bodyColor: '#38bdf8',
+                            borderColor: 'rgba(6, 182, 212, 0.3)',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                label: (ctx) => `Intake: ${ctx.parsed.y.toLocaleString()} ml / Goal: ${waterPayload.goal.toLocaleString()} ml`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            grid: commonGridOptions,
+                            suggestedMin: 0,
+                            suggestedMax: Math.max(...waterPayload.data, waterPayload.goal) * 1.15,
+                            ticks: { callback: (v) => v + ' ml' }
+                        }
+                    }
+                }
+            });
+        } catch (err) {
+            console.error("Failed to parse Water Chart Payload:", err);
+        }
+    }
+
+    // 3. Initialize General Dashboard Charts
     const chartDataEl = document.getElementById('chart-data');
     if (chartDataEl) {
         let chartData = null;
         try {
             chartData = JSON.parse(chartDataEl.textContent);
         } catch (e) {
-            console.error("Failed to parse Chart JSON data:", e);
+            console.error("Failed to parse Dashboard Chart JSON data:", e);
             return;
         }
 
         if (!chartData) return;
-
         const labels = chartData.short_labels || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-        Chart.defaults.color = '#9ca3af';
-        Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
-        Chart.defaults.font.size = 12;
-
-        const commonGridOptions = {
-            color: 'rgba(255, 255, 255, 0.06)',
-            drawBorder: false
-        };
 
         // Steps Chart on Dashboard
         const stepsCanvas = document.getElementById('weeklyStepsChart');
@@ -341,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Water Chart
+        // Water Chart on Dashboard
         const waterCanvas = document.getElementById('weeklyWaterChart');
         if (waterCanvas) {
             const ctx = waterCanvas.getContext('2d');
@@ -394,7 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Sleep Chart
+        // Sleep Chart on Dashboard
         const sleepCanvas = document.getElementById('weeklySleepChart');
         if (sleepCanvas) {
             const ctx = sleepCanvas.getContext('2d');

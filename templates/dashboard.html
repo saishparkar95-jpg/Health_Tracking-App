@@ -32,6 +32,10 @@
                 <span class="nav-icon">👟</span>
                 <span class="nav-label">Step Tracking</span>
             </a>
+            <a href="{{ url_for('water_page') }}" class="nav-item">
+                <span class="nav-icon">💧</span>
+                <span class="nav-label">Water Tracking</span>
+            </a>
             <a href="#overview-section" class="nav-item">
                 <span class="nav-icon">⚡</span>
                 <span class="nav-label">Today's Stats</span>
@@ -44,7 +48,7 @@
                 <span class="nav-icon">📈</span>
                 <span class="nav-label">Weekly Trends</span>
             </a>
-            <button type="button" class="nav-item btn-sidebar-action" onclick="openQuickLogModal('steps')">
+            <button type="button" class="nav-item btn-sidebar-action" onclick="openQuickLogModal('water')">
                 <span class="nav-icon">➕</span>
                 <span class="nav-label">Quick Log Data</span>
             </button>
@@ -72,17 +76,17 @@
             <span class="mobile-nav-icon">📊</span>
             <span class="mobile-nav-text">Home</span>
         </a>
-        <a href="#overview-section" class="mobile-nav-item">
+        <a href="{{ url_for('steps_page') }}" class="mobile-nav-item">
             <span class="mobile-nav-icon">👟</span>
-            <span class="mobile-nav-text">Activity</span>
+            <span class="mobile-nav-text">Steps</span>
         </a>
         <button type="button" class="mobile-nav-item mobile-nav-btn" onclick="openQuickLogModal('water')">
             <span class="mobile-nav-icon highlight">➕</span>
             <span class="mobile-nav-text">Log</span>
         </button>
-        <a href="#charts-section" class="mobile-nav-item">
-            <span class="mobile-nav-icon">📈</span>
-            <span class="mobile-nav-text">Trends</span>
+        <a href="{{ url_for('water_page') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">💧</span>
+            <span class="mobile-nav-text">Water</span>
         </a>
         <a href="{{ url_for('logout') }}" class="mobile-nav-item">
             <span class="mobile-nav-icon">🚪</span>

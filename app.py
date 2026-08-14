@@ -1,6 +1,6 @@
 """
 HealthTrack AI - Main Flask Application
-Step 5: Step Tracking Module (Add/Update Steps, Daily Goal Setting, Weekly/Monthly Charts, History)
+Step 6: Water Tracking Module (Quick Presets, Custom Amounts, Daily Goal, History & Weekly Charts)
 """
 
 import os
@@ -16,7 +16,6 @@ from auth import (
 from dashboard_service import (
     get_user_dashboard_metrics,
     ensure_user_has_initial_data,
-    log_user_water,
     log_user_sleep,
     log_user_weight,
     log_user_heart_rate
@@ -27,6 +26,12 @@ from step_service import (
     update_user_steps,
     set_user_step_goal,
     delete_user_step_record
+)
+from water_service import (
+    get_water_module_data,
+    add_water_intake,
+    set_user_water_goal,
+    delete_user_water_log
 )
 
 # 1. Initialize Flask Application
@@ -69,7 +74,7 @@ def home():
     app_info = {
         "name": "HealthTrack AI",
         "tagline": "Your Modern Personal Health & Wellness Companion",
-        "version": "1.4.0 (Step 5 - Step Tracking Ready)"
+        "version": "1.5.0 (Step 6 - Water Tracking Ready)"
     }
     return render_template('index.html', info=app_info)
 
@@ -211,16 +216,8 @@ def dashboard():
 @app.route('/steps')
 @login_required
 def steps_page():
-    """
-    Dedicated Step Tracking Module page:
-    - Today's Progress Ring, Distance, Calories, Active Time
-    - Goal setting
-    - Weekly (7-day) and Monthly (30-day) Chart.js views
-    - Activity history table with edit/delete
-    """
     user_id = session.get("user_id")
     ensure_user_has_initial_data(user_id)
-
     step_data = get_step_module_data(user_id)
     return render_template('steps.html', **step_data)
 
@@ -229,10 +226,6 @@ def steps_page():
 @app.route('/log/steps', methods=['POST'], endpoint='log_steps_route')
 @login_required
 def add_steps_route():
-    """
-    Adds/increments steps for today or a chosen date.
-    Prevents negative or invalid values.
-    """
     user_id = session.get("user_id")
     steps = request.form.get("steps")
     target_date = request.form.get("date") or None
@@ -253,9 +246,6 @@ def add_steps_route():
 @app.route('/steps/update', methods=['POST'])
 @login_required
 def update_steps_route():
-    """
-    Sets the exact step count for today or a specified date.
-    """
     user_id = session.get("user_id")
     steps = request.form.get("steps")
     target_date = request.form.get("date") or None
@@ -276,9 +266,6 @@ def update_steps_route():
 @app.route('/steps/goal', methods=['POST'])
 @login_required
 def set_step_goal_route():
-    """
-    Updates the user's daily step goal.
-    """
     user_id = session.get("user_id")
     new_goal = request.form.get("daily_step_goal")
     redirect_target = request.form.get("redirect") or url_for("steps_page")
@@ -297,9 +284,6 @@ def set_step_goal_route():
 @app.route('/steps/delete/<int:record_id>', methods=['POST'])
 @login_required
 def delete_step_record_route(record_id):
-    """
-    Deletes an activity record belonging to the logged-in user.
-    """
     user_id = session.get("user_id")
     success = delete_user_step_record(user_id, record_id)
     if success:
@@ -309,21 +293,90 @@ def delete_step_record_route(record_id):
     return redirect(url_for("steps_page"))
 
 
-# 10. Quick Logging Endpoints for Other Modules
-@app.route('/log/water', methods=['POST'])
+# =============================================================================
+# 10. WATER TRACKING MODULE ROUTES (STEP 6)
+# =============================================================================
+
+@app.route('/water')
 @login_required
-def log_water_route():
+def water_page():
+    """
+    Dedicated Water Tracking Module page:
+    - Today's Water Progress & Visual Liquid Bottle
+    - Quick Preset Buttons (+250ml, +500ml, +750ml, +1000ml)
+    - Custom Amount Logger & Beverage Selection
+    - Daily Water Goal Setting
+    - Weekly Chart.js Hydration Trends
+    - Water Intake History Log with Single Record Deletion
+    """
     user_id = session.get("user_id")
-    amount = request.form.get("amount_ml") or 250
+    ensure_user_has_initial_data(user_id)
+    water_data = get_water_module_data(user_id)
+    return render_template('water.html', **water_data)
+
+
+@app.route('/water/add', methods=['POST'], endpoint='add_water_route')
+@app.route('/log/water', methods=['POST'], endpoint='log_water_route')
+@login_required
+def add_water_route():
+    """
+    Records water intake in milliliters.
+    Prevents negative or unreasonable values.
+    """
+    user_id = session.get("user_id")
+    amount = request.form.get("amount_ml")
     beverage = request.form.get("beverage_type") or "Water"
+    target_date = request.form.get("date") or None
+    redirect_target = request.form.get("redirect") or request.referrer or url_for("water_page")
+
     try:
-        log_user_water(user_id, int(amount), beverage)
-        flash(f"Logged +{int(amount)} ml of {beverage}!", "success")
+        new_total = add_water_intake(user_id, amount, beverage_type=beverage, intake_date=target_date)
+        flash(f"Logged +{int(amount):,} ml of {beverage}! Today's hydration is {new_total:,} ml.", "success")
+    except ValueError as err:
+        flash(str(err), "danger")
     except Exception as e:
-        flash("Failed to log water intake.", "danger")
-    return redirect(request.referrer or url_for("dashboard"))
+        flash("An error occurred while logging water intake.", "danger")
+
+    return redirect(redirect_target)
 
 
+@app.route('/water/goal', methods=['POST'])
+@login_required
+def set_water_goal_route():
+    """
+    Updates the user's daily hydration goal.
+    """
+    user_id = session.get("user_id")
+    new_goal = request.form.get("daily_water_goal_ml")
+    redirect_target = request.form.get("redirect") or url_for("water_page")
+
+    try:
+        saved_goal = set_user_water_goal(user_id, new_goal)
+        flash(f"Daily water goal updated to {saved_goal:,} ml!", "success")
+    except ValueError as err:
+        flash(str(err), "danger")
+    except Exception as e:
+        flash("Failed to update daily water goal.", "danger")
+
+    return redirect(redirect_target)
+
+
+@app.route('/water/delete/<int:log_id>', methods=['POST'])
+@login_required
+def delete_water_log_route(log_id):
+    """
+    Deletes an individual water log.
+    """
+    user_id = session.get("user_id")
+    success = delete_user_water_log(user_id, log_id)
+    if success:
+        flash("Water intake record deleted successfully.", "info")
+    else:
+        flash("Water log could not be found or unauthorized.", "danger")
+    return redirect(url_for("water_page"))
+
+
+# 11. Quick Logging Endpoints for Sleep, Weight, Heart Rate
 @app.route('/log/sleep', methods=['POST'])
 @login_required
 def log_sleep_route():
@@ -367,7 +420,7 @@ def log_heart_rate_route():
     return redirect(request.referrer or url_for("dashboard"))
 
 
-# 11. Application Entry Point
+# 12. Application Entry Point
 if __name__ == '__main__':
     print("-------------------------------------------------------")
     print("[HealthTrack AI] Initializing SQLite database...")

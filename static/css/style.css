@@ -1,6 +1,6 @@
 /* ==========================================================================
    HealthTrack AI - Complete Stylesheet
-   Step 5: Step Tracking Module, Radial Ring, Weekly/Monthly Charts & History
+   Step 6: Water Tracking Module, Liquid Bottle Gauge, Quick Presets & History
    Modern, responsive, glassmorphism dark-slate theme with emerald/cyan accents
    ========================================================================== */
 
@@ -24,6 +24,7 @@
     --primary-dark: #059669;
     --primary-glow: rgba(16, 185, 129, 0.25);
     --accent-cyan: #06b6d4;     /* Energy Cyan */
+    --accent-cyan-light: #38bdf8;
     --accent-purple: #a855f7;   /* Sleep Purple */
     --accent-amber: #f59e0b;    /* Warm Amber */
     --accent-rose: #f43f5e;     /* Heart Rose */
@@ -119,6 +120,7 @@ a:hover {
 .text-secondary { color: var(--text-secondary); }
 .text-muted { color: var(--text-muted); }
 .text-success { color: var(--primary-light); }
+.text-cyan { color: var(--accent-cyan); }
 .font-bold { font-weight: 700; }
 
 .inline-form {
@@ -372,7 +374,7 @@ a:hover {
 }
 
 /* ==========================================================================
-   DASHBOARD & STEP TRACKING LAYOUT
+   DASHBOARD & MODULE LAYOUT (Sidebar, Topbar, Main Wrapper, Mobile Nav)
    ========================================================================== */
 .dashboard-body {
     display: flex;
@@ -626,7 +628,6 @@ a:hover {
     background: linear-gradient(90deg, var(--primary), var(--accent-cyan));
 }
 
-/* Radial Ring */
 .ring-container {
     flex-shrink: 0;
 }
@@ -660,7 +661,6 @@ a:hover {
 }
 
 .ring-emerald {
-    stroke: url(#emeraldGrad);
     stroke: #10b981;
     filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.6));
 }
@@ -689,7 +689,6 @@ a:hover {
     margin-top: 0.2rem;
 }
 
-/* Step Hero Info */
 .step-hero-info {
     flex: 1;
 }
@@ -736,7 +735,6 @@ a:hover {
     border-radius: var(--radius-full);
 }
 
-/* Derivative Metrics */
 .derivative-metrics-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -777,7 +775,6 @@ a:hover {
     color: var(--text-muted);
 }
 
-/* Quick Step Bar */
 .quick-step-bar {
     display: flex;
     align-items: center;
@@ -812,6 +809,184 @@ a:hover {
     color: #ffffff;
     box-shadow: 0 0 12px var(--primary-glow);
     transform: translateY(-2px);
+}
+
+/* ==========================================================================
+   WATER TRACKING HERO & LIQUID BOTTLE GAUGE (STEP 6)
+   ========================================================================== */
+.water-hero-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(6, 182, 212, 0.35);
+    border-radius: var(--radius-lg);
+    padding: 2.25rem;
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+    box-shadow: var(--shadow-card);
+    position: relative;
+    overflow: hidden;
+}
+
+.water-hero-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent-cyan), #38bdf8);
+}
+
+/* Water Bottle Visual */
+.water-bottle-container {
+    flex-shrink: 0;
+}
+
+.water-bottle {
+    width: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.bottle-cap {
+    width: 32px;
+    height: 10px;
+    background: #38bdf8;
+    border-radius: 4px 4px 0 0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.bottle-neck {
+    width: 22px;
+    height: 12px;
+    background: rgba(6, 182, 212, 0.2);
+    border-left: 2px solid rgba(6, 182, 212, 0.4);
+    border-right: 2px solid rgba(6, 182, 212, 0.4);
+}
+
+.bottle-body {
+    width: 90px;
+    height: 150px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 2px solid rgba(6, 182, 212, 0.5);
+    border-radius: 12px 12px 24px 24px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
+    display: flex;
+    align-items: flex-end;
+}
+
+.water-fill-level {
+    width: 100%;
+    background: linear-gradient(180deg, rgba(56, 189, 248, 0.85) 0%, rgba(6, 182, 212, 0.95) 100%);
+    box-shadow: 0 -4px 15px rgba(6, 182, 212, 0.5);
+    transition: height 1s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.water-wave-crest {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+}
+
+.bottle-overlay-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.bottle-pct {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #ffffff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.bottle-ml {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #ffffff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.water-hero-info {
+    flex: 1;
+}
+
+.water-count-huge {
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0.5rem 0 0.4rem;
+    line-height: 1.1;
+}
+
+.water-count-sub {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.quick-water-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.btn-water-chip {
+    background: rgba(6, 182, 212, 0.15);
+    border: 1px solid rgba(6, 182, 212, 0.4);
+    color: var(--accent-cyan-light);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.4rem 0.9rem;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.btn-water-chip:hover {
+    background: var(--accent-cyan);
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.5);
+    transform: translateY(-2px);
+}
+
+.beverage-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(6, 182, 212, 0.1);
+    border: 1px solid rgba(6, 182, 212, 0.25);
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.825rem;
+    color: var(--text-primary);
 }
 
 /* ==========================================================================
@@ -926,13 +1101,31 @@ a:hover {
     font-weight: 700;
 }
 
+.badge-cyan {
+    background: rgba(6, 182, 212, 0.15);
+    color: var(--accent-cyan);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.775rem;
+    font-weight: 700;
+}
+
+.badge-purple {
+    background: rgba(168, 85, 247, 0.15);
+    color: var(--accent-purple);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.775rem;
+    font-weight: 700;
+}
+
 .chart-canvas-wrapper {
     position: relative;
     width: 100%;
 }
 
 /* ==========================================================================
-   ACTIVITY HISTORY TABLE
+   ACTIVITY & WATER HISTORY TABLES
    ========================================================================== */
 .history-table-card {
     background: var(--bg-card);
@@ -1206,7 +1399,7 @@ a:hover {
 }
 
 @media (max-width: 768px) {
-    .step-hero-card {
+    .step-hero-card, .water-hero-card {
         flex-direction: column;
         align-items: center;
         text-align: center;
@@ -1217,11 +1410,11 @@ a:hover {
         grid-template-columns: 1fr;
     }
 
-    .quick-step-bar {
+    .quick-step-bar, .quick-water-bar {
         justify-content: center;
     }
 
-    .step-count-huge {
+    .step-count-huge, .water-count-huge {
         font-size: 2.2rem;
     }
 
