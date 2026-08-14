@@ -1,6 +1,6 @@
 /**
  * HealthTrack AI - Client-Side JavaScript
- * Step 6: Water Tracking Module, Liquid Bottle Gauge, Chart.js Integrations, and Modals
+ * Step 7: Sleep Tracking Module, Cross-Midnight Live Duration Preview, Chart.js Integrations, and Modals
  */
 
 /* =============================================================================
@@ -171,25 +171,115 @@ function switchWaterModalTab(tabName) {
     }
 }
 
+
+/* =============================================================================
+   5. SLEEP TRACKING MODAL & LIVE DURATION CALCULATOR (STEP 7)
+   ============================================================================= */
+function openSleepModal(tabName = 'log') {
+    const modal = document.getElementById('sleepActionModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    switchSleepModalTab(tabName);
+}
+
+function closeSleepModal() {
+    const modal = document.getElementById('sleepActionModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function switchSleepModalTab(tabName) {
+    const tabFormMap = {
+        'log': 'form-log-sleep-modal',
+        'goal': 'form-goal-sleep-modal'
+    };
+
+    const tabBtnMap = {
+        'log': 'sleep-tab-log',
+        'goal': 'sleep-tab-goal'
+    };
+
+    document.querySelectorAll('.sleep-modal-pane').forEach(pane => {
+        pane.style.display = 'none';
+    });
+
+    document.querySelectorAll('#sleepActionModal .modal-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    const targetFormId = tabFormMap[tabName] || 'form-log-sleep-modal';
+    const targetForm = document.getElementById(targetFormId);
+    if (targetForm) {
+        targetForm.style.display = 'block';
+    }
+
+    const targetBtnId = tabBtnMap[tabName] || 'sleep-tab-log';
+    const targetBtn = document.getElementById(targetBtnId);
+    if (targetBtn) {
+        targetBtn.classList.add('active');
+    }
+}
+
+/**
+ * Calculates live sleep duration handling cross-midnight periods.
+ */
+function updateLiveDurationPreview() {
+    const bedtimeInput = document.getElementById('inline-bedtime');
+    const wakeInput = document.getElementById('inline-wake-time');
+    const previewEl = document.getElementById('live-duration-text');
+
+    if (!bedtimeInput || !wakeInput || !previewEl) return;
+
+    const bVal = bedtimeInput.value;
+    const wVal = wakeInput.value;
+
+    if (!bVal || !wVal) {
+        previewEl.textContent = 'Please enter both bedtime and wake-up time.';
+        return;
+    }
+
+    const [bH, bM] = bVal.split(':').map(Number);
+    const [wH, wM] = wVal.split(':').map(Number);
+
+    const bTotal = bH * 60 + bM;
+    const wTotal = wH * 60 + wM;
+
+    let diffMins = 0;
+    let crossesMidnight = false;
+
+    if (wTotal <= bTotal) {
+        // Crosses midnight (e.g. 23:00 to 07:30 = (1440 - 1380) + 450 = 60 + 450 = 510 mins)
+        diffMins = (1440 - bTotal) + wTotal;
+        crossesMidnight = true;
+    } else {
+        // Same-day nap or schedule
+        diffMins = wTotal - bTotal;
+    }
+
+    const hours = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    const midnightTag = crossesMidnight ? ' (Crosses midnight)' : ' (Same day)';
+
+    previewEl.textContent = `${hours} hours ${mins > 0 ? mins + ' minutes' : '00 minutes'}${midnightTag}`;
+}
+
+
 // Window click-outside dismiss for all modals
 window.addEventListener('click', (e) => {
     const quickModal = document.getElementById('quickLogModal');
-    if (quickModal && e.target === quickModal) {
-        closeQuickLogModal();
-    }
+    if (quickModal && e.target === quickModal) closeQuickLogModal();
     const stepModal = document.getElementById('stepActionModal');
-    if (stepModal && e.target === stepModal) {
-        closeStepModal();
-    }
+    if (stepModal && e.target === stepModal) closeStepModal();
     const waterModal = document.getElementById('waterActionModal');
-    if (waterModal && e.target === waterModal) {
-        closeWaterModal();
-    }
+    if (waterModal && e.target === waterModal) closeWaterModal();
+    const sleepModal = document.getElementById('sleepActionModal');
+    if (sleepModal && e.target === sleepModal) closeSleepModal();
 });
 
 
 /* =============================================================================
-   5. STEP MODULE WEEKLY VS MONTHLY CHART.JS SWITCHER (STEP 5)
+   6. STEP MODULE WEEKLY VS MONTHLY CHART.JS SWITCHER (STEP 5)
    ============================================================================= */
 let stepTrendChartInstance = null;
 let stepPayloadData = null;
@@ -289,10 +379,13 @@ function showChartPeriod(period) {
 
 
 /* =============================================================================
-   6. DOM INITIALIZATION & CHART.JS MOUNTING
+   7. DOM INITIALIZATION & CHART.JS MOUNTING
    ============================================================================= */
 document.addEventListener('DOMContentLoaded', () => {
     console.log("⚡ HealthTrack AI (Modules & Visualizations) active.");
+
+    // Initialize live sleep preview if on sleep page
+    updateLiveDurationPreview();
 
     // Auto-dismiss Alerts
     const flashAlerts = document.querySelectorAll('.alert');
@@ -315,7 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
         drawBorder: false
     };
 
-    // 1. Initialize Step Module Specific Chart
+    // 1. Initialize Step Module Specific Chart (Step 5)
     const stepPayloadEl = document.getElementById('step-chart-payload');
     if (stepPayloadEl) {
         try {
@@ -385,7 +478,66 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 3. Initialize General Dashboard Charts
+    // 3. Initialize Sleep Module Specific Chart (Step 7)
+    const sleepPayloadEl = document.getElementById('sleep-chart-payload');
+    const sleepTrendCanvas = document.getElementById('sleepTrendChart');
+    if (sleepPayloadEl && sleepTrendCanvas) {
+        try {
+            const sleepPayload = JSON.parse(sleepPayloadEl.textContent);
+            const ctx = sleepTrendCanvas.getContext('2d');
+            const purpleGradient = ctx.createLinearGradient(0, 0, 0, 300);
+            purpleGradient.addColorStop(0, 'rgba(168, 85, 247, 0.9)');
+            purpleGradient.addColorStop(1, 'rgba(168, 85, 247, 0.2)');
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sleepPayload.labels,
+                    datasets: [{
+                        label: 'Sleep Duration (Hours)',
+                        data: sleepPayload.hours,
+                        backgroundColor: purpleGradient,
+                        borderColor: '#a855f7',
+                        borderWidth: 1.5,
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        barPercentage: 0.55
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#111827',
+                            titleColor: '#f9fafb',
+                            bodyColor: '#c084fc',
+                            borderColor: 'rgba(168, 85, 247, 0.3)',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                label: (ctx) => `Sleep: ${ctx.parsed.y} hrs / Target: ${sleepPayload.goal} hrs`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            grid: commonGridOptions,
+                            suggestedMin: 0,
+                            suggestedMax: Math.max(...sleepPayload.hours, sleepPayload.goal) * 1.2,
+                            ticks: { callback: (v) => v + 'h' }
+                        }
+                    }
+                }
+            });
+        } catch (err) {
+            console.error("Failed to parse Sleep Chart Payload:", err);
+        }
+    }
+
+    // 4. Initialize General Dashboard Charts
     const chartDataEl = document.getElementById('chart-data');
     if (chartDataEl) {
         let chartData = null;

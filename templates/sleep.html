@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="HealthTrack AI - Sleep Tracking, Bedtime and Wake-up Monitoring, Sleep Quality and Trends">
+    <title>Sleep Tracking - HealthTrack AI</title>
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- Custom CSS Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="dashboard-body">
+
+    <!-- Desktop Sidebar Navigation -->
+    <aside class="sidebar" id="desktop-sidebar">
+        <div class="sidebar-header">
+            <a href="/" class="brand-logo">
+                <span class="brand-icon">⚡</span>
+                <span class="brand-text">HealthTrack <span class="ai-highlight">AI</span></span>
+            </a>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('dashboard') }}" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Dashboard</span>
+            </a>
+            <a href="{{ url_for('steps_page') }}" class="nav-item">
+                <span class="nav-icon">👟</span>
+                <span class="nav-label">Step Tracking</span>
+            </a>
+            <a href="{{ url_for('water_page') }}" class="nav-item">
+                <span class="nav-icon">💧</span>
+                <span class="nav-label">Water Tracking</span>
+            </a>
+            <a href="{{ url_for('sleep_page') }}" class="nav-item active">
+                <span class="nav-icon">🌙</span>
+                <span class="nav-label">Sleep Rest</span>
+            </a>
+            <button type="button" class="nav-item btn-sidebar-action" onclick="openSleepModal('log')">
+                <span class="nav-icon">➕</span>
+                <span class="nav-label">Log Sleep Session</span>
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-badge">
+                <div class="user-avatar">
+                    {{ current_user.full_name[:1].upper() if current_user.full_name else 'U' }}
+                </div>
+                <div class="user-meta">
+                    <span class="user-name">{{ current_user.full_name }}</span>
+                    <span class="user-handle">@{{ current_user.username }}</span>
+                </div>
+            </div>
+            <a href="{{ url_for('logout') }}" class="btn-logout" title="Sign Out">
+                <span>🚪</span> Sign Out
+            </a>
+        </div>
+    </aside>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+        <a href="{{ url_for('dashboard') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">📊</span>
+            <span class="mobile-nav-text">Home</span>
+        </a>
+        <a href="{{ url_for('steps_page') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">👟</span>
+            <span class="mobile-nav-text">Steps</span>
+        </a>
+        <button type="button" class="mobile-nav-item mobile-nav-btn" onclick="openSleepModal('log')">
+            <span class="mobile-nav-icon highlight">➕</span>
+            <span class="mobile-nav-text">Log</span>
+        </button>
+        <a href="{{ url_for('sleep_page') }}" class="mobile-nav-item active">
+            <span class="mobile-nav-icon">🌙</span>
+            <span class="mobile-nav-text">Sleep</span>
+        </a>
+        <a href="{{ url_for('logout') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">🚪</span>
+            <span class="mobile-nav-text">Logout</span>
+        </a>
+    </nav>
+
+    <!-- Main Content Wrapper -->
+    <div class="dashboard-main-wrapper">
+        
+        <!-- Topbar -->
+        <header class="dashboard-topbar">
+            <div class="topbar-left">
+                <h1 class="page-heading">🌙 Sleep &amp; Rest Monitoring</h1>
+                <p class="date-badge">📅 {{ today_str }} &bull; Bedtime, Wake Time &amp; Quality Analytics</p>
+            </div>
+            <div class="topbar-right">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="openSleepModal('goal')">
+                    🎯 Target: {{ today.goal_hours }} hrs
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="openSleepModal('log')">
+                    ➕ Log Sleep
+                </button>
+            </div>
+        </header>
+
+        <!-- Flash Messages -->
+        <div class="dashboard-container flash-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span>{{ message }}</span>
+                            <button type="button" class="alert-close" onclick="this.parentElement.remove();">&times;</button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- Informational Disclaimer Banner -->
+            <div class="alert alert-info" style="margin-bottom: 1.5rem;">
+                <span>ℹ️ <strong>Wellness Disclaimer:</strong> HealthTrack AI is designed for habit and wellness tracking. Sleep metrics are informational estimates and do not provide medical diagnosis.</span>
+            </div>
+        </div>
+
+        <main class="dashboard-content">
+            <div class="dashboard-container">
+
+                <!-- 1. HERO SECTION: SLEEP MOON GAUGE & TODAY'S SLEEP SUMMARY -->
+                <section class="dash-section">
+                    <div class="sleep-hero-card">
+                        
+                        <!-- Left: Circular Sleep Moon Gauge -->
+                        <div class="ring-container">
+                            <div class="circular-progress-ring">
+                                <svg class="progress-ring-svg" viewBox="0 0 160 160">
+                                    <circle class="ring-bg" cx="80" cy="80" r="68"></circle>
+                                    <circle 
+                                        class="ring-progress ring-purple" 
+                                        cx="80" 
+                                        cy="80" 
+                                        r="68" 
+                                        style="stroke-dasharray: 427.26; stroke-dashoffset: {{ 427.26 - (427.26 * (today.goal_pct / 100)) }};"
+                                    ></circle>
+                                </svg>
+                                <div class="ring-center-content">
+                                    <span class="ring-percentage">{{ today.hours }}h</span>
+                                    <span class="ring-label">of {{ today.goal_hours }}h target</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Sleep Session Details -->
+                        <div class="sleep-hero-info">
+                            <span class="badge badge-purple">Last Night's Sleep</span>
+                            <h2 class="sleep-count-huge">
+                                {{ today.formatted_duration }}
+                                <span class="sleep-count-sub">({{ today.goal_pct }}% of goal)</span>
+                            </h2>
+                            
+                            <div class="goal-status-row">
+                                {% if today.is_goal_met %}
+                                    <span class="status-pill-success">🎉 Rest Target Met! Sleep Quality: {{ today.quality_score }}%</span>
+                                {% else %}
+                                    <span class="status-pill-neutral">🌙 {{ today.remaining_hours }}h remaining to hit {{ today.goal_hours }}h target</span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Bedtime & Wake Time Pills -->
+                            <div class="bedtime-wake-row">
+                                <div class="time-block">
+                                    <span class="time-block-icon">🛌</span>
+                                    <div>
+                                        <span class="time-block-label">Bedtime</span>
+                                        <span class="time-block-val">{{ today.bedtime }}</span>
+                                    </div>
+                                </div>
+                                <div class="time-arrow">&rarr;</div>
+                                <div class="time-block">
+                                    <span class="time-block-icon">⏰</span>
+                                    <div>
+                                        <span class="time-block-label">Wake-up Time</span>
+                                        <span class="time-block-val">{{ today.wake_time }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Derivative Sleep Stages Breakdown -->
+                            <div class="derivative-metrics-row" style="margin-top: 1.25rem;">
+                                <div class="metric-mini-card">
+                                    <span class="mini-icon">✨</span>
+                                    <div>
+                                        <span class="mini-val">{{ today.quality_score }}<small>%</small></span>
+                                        <span class="mini-label">Sleep Quality Score</span>
+                                    </div>
+                                </div>
+
+                                <div class="metric-mini-card">
+                                    <span class="mini-icon">🧠</span>
+                                    <div>
+                                        <span class="mini-val">{{ today.deep_mins }} <small>mins</small></span>
+                                        <span class="mini-label">Deep Sleep</span>
+                                    </div>
+                                </div>
+
+                                <div class="metric-mini-card">
+                                    <span class="mini-icon">🌌</span>
+                                    <div>
+                                        <span class="mini-val">{{ today.rem_mins }} <small>mins</small></span>
+                                        <span class="mini-label">REM Sleep</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Quick Action Buttons -->
+                            <div class="quick-sleep-bar">
+                                <button type="button" class="btn btn-primary btn-sm" onclick="openSleepModal('log')">
+                                    ➕ Log Bedtime &amp; Wake-up
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="openSleepModal('goal')">
+                                    🎯 Change Sleep Target
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+
+                <!-- 2. QUICK LOGGING FORM CARD WITH LIVE DURATION PREVIEW -->
+                <section class="dash-section">
+                    <div class="section-header-row">
+                        <div>
+                            <h2 class="dash-section-title">Log Sleep Session</h2>
+                            <p class="dash-section-sub">Enter your bedtime and wake-up time (cross-midnight calculated automatically)</p>
+                        </div>
+                    </div>
+
+                    <div class="quick-log-card">
+                        <form action="{{ url_for('add_sleep_route') }}" method="POST" id="inline-sleep-form">
+                            <div class="form-grid form-grid-4">
+                                
+                                <!-- Bedtime Input -->
+                                <div class="form-group">
+                                    <label for="inline-bedtime" class="form-label">Bedtime <span class="req">*</span></label>
+                                    <input 
+                                        type="time" 
+                                        id="inline-bedtime" 
+                                        name="bedtime" 
+                                        class="form-input" 
+                                        value="23:15" 
+                                        required 
+                                        onchange="updateLiveDurationPreview()"
+                                    >
+                                    <span class="field-hint">e.g. 11:15 PM</span>
+                                </div>
+
+                                <!-- Wake-up Time Input -->
+                                <div class="form-group">
+                                    <label for="inline-wake-time" class="form-label">Wake-up Time <span class="req">*</span></label>
+                                    <input 
+                                        type="time" 
+                                        id="inline-wake-time" 
+                                        name="wake_time" 
+                                        class="form-input" 
+                                        value="07:15" 
+                                        required 
+                                        onchange="updateLiveDurationPreview()"
+                                    >
+                                    <span class="field-hint">e.g. 07:15 AM</span>
+                                </div>
+
+                                <!-- Sleep Date -->
+                                <div class="form-group">
+                                    <label for="inline-sleep-date" class="form-label">Date</label>
+                                    <input type="date" id="inline-sleep-date" name="date" class="form-input" value="{{ today_str }}">
+                                    <span class="field-hint">Morning wake date</span>
+                                </div>
+
+                                <!-- Sleep Quality Score -->
+                                <div class="form-group">
+                                    <label for="inline-quality" class="form-label">Quality Score (1-100)</label>
+                                    <input type="number" id="inline-quality" name="quality" class="form-input" min="1" max="100" value="88">
+                                    <span class="field-hint">How rested you feel</span>
+                                </div>
+
+                            </div>
+
+                            <!-- Live Duration Feedback Pill -->
+                            <div class="live-duration-banner">
+                                <span class="live-tag">⏱️ Live Calculation:</span>
+                                <span class="live-val" id="live-duration-text">8 hours 00 minutes (Crosses midnight)</span>
+                            </div>
+
+                            <!-- Optional Notes -->
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label for="inline-notes" class="form-label">Sleep Notes (Optional)</label>
+                                <input type="text" id="inline-notes" name="notes" class="form-input" placeholder="e.g. Dark room, no screen time before bed, woke up energized">
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top: 1rem;">
+                                Save Sleep Session &rarr;
+                            </button>
+                        </form>
+                    </div>
+                </section>
+
+
+                <!-- 3. WEEKLY SLEEP TRENDS CHART SECTION -->
+                <section class="dash-section" id="sleep-charts-section">
+                    <div class="section-header-row">
+                        <div>
+                            <h2 class="dash-section-title">Weekly Sleep Trends</h2>
+                            <p class="dash-section-sub">Past 7 days sleep duration and rest patterns vs {{ today.goal_hours }}h target</p>
+                        </div>
+                        <span class="badge-purple">7-Day Rest History</span>
+                    </div>
+
+                    <!-- Summary Cards -->
+                    <div class="chart-summary-cards">
+                        <div class="summary-box">
+                            <span class="summary-title">7-Day Total Sleep</span>
+                            <span class="summary-num">{{ weekly.total_hours }} <small>hours</small></span>
+                        </div>
+                        <div class="summary-box">
+                            <span class="summary-title">7-Day Daily Avg</span>
+                            <span class="summary-num">{{ weekly.avg_hours }} <small>hrs/night</small></span>
+                        </div>
+                        <div class="summary-box">
+                            <span class="summary-title">Daily Sleep Target</span>
+                            <span class="summary-num text-success">🎯 {{ today.goal_hours }} <small>hours</small></span>
+                        </div>
+                    </div>
+
+                    <!-- Chart Card Container -->
+                    <div class="chart-card chart-card-wide">
+                        <div class="chart-card-header">
+                            <div>
+                                <h3 class="chart-title">🌙 7-Day Sleep Duration (Hours)</h3>
+                                <p class="chart-sub">Logged night duration and sleep phases</p>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="openSleepModal('goal')">
+                                🎯 Adjust Target
+                            </button>
+                        </div>
+                        <div class="chart-canvas-wrapper" style="height: 320px;">
+                            <canvas id="sleepTrendChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- 4. SLEEP HISTORY LOG SECTION -->
+                <section class="dash-section">
+                    <div class="section-header-row">
+                        <div>
+                            <h2 class="dash-section-title">Sleep History Log</h2>
+                            <p class="dash-section-sub">Your logged sleep sessions stored in SQLite</p>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="openSleepModal('log')">
+                            ➕ Log Previous Night
+                        </button>
+                    </div>
+
+                    <div class="history-table-card">
+                        {% if history %}
+                            <div class="table-responsive">
+                                <table class="custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Bedtime</th>
+                                            <th>Wake Time</th>
+                                            <th>Duration</th>
+                                            <th>Quality</th>
+                                            <th>Stages (Deep / REM)</th>
+                                            <th>Notes</th>
+                                            <th class="text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for rec in history %}
+                                            <tr>
+                                                <td class="font-bold">
+                                                    📅 {{ rec.sleep_date }}
+                                                    {% if rec.sleep_date == today_str %}
+                                                        <span class="badge-mini-today">Today</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>🛌 {{ rec.bedtime }}</td>
+                                                <td>⏰ {{ rec.wake_time }}</td>
+                                                <td class="font-bold text-purple">
+                                                    {{ rec.formatted_duration }}
+                                                </td>
+                                                <td>
+                                                    <span class="quality-badge quality-{{ 'high' if rec.sleep_quality_score >= 85 else ('med' if rec.sleep_quality_score >= 70 else 'low') }}">
+                                                        ✨ {{ rec.sleep_quality_score }}%
+                                                    </span>
+                                                </td>
+                                                <td class="text-sm">
+                                                    🧠 {{ rec.deep_sleep_minutes }}m deep / 🌌 {{ rec.rem_sleep_minutes }}m REM
+                                                </td>
+                                                <td class="text-muted text-sm">
+                                                    {{ rec.notes if rec.notes else '—' }}
+                                                </td>
+                                                <td class="text-right">
+                                                    <form action="{{ url_for('delete_sleep_record_route', record_id=rec.id) }}" method="POST" class="inline-form" onsubmit="return confirm('Are you sure you want to delete this sleep session?');">
+                                                        <button type="submit" class="btn-delete-icon" title="Delete log">🗑️</button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="empty-state">
+                                <span class="empty-icon">🌙</span>
+                                <h3>No sleep sessions logged yet</h3>
+                                <p>Start tracking your bedtime and wake-up habits to discover restful sleep patterns!</p>
+                                <button type="button" class="btn btn-primary btn-sm" onclick="openSleepModal('log')">
+                                    Log First Night &rarr;
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </section>
+
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container footer-content">
+                <p>&copy; 2026 HealthTrack AI &bull; Sleep Tracking Module &bull; Informational Wellness Tracking</p>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- =======================================================================
+         SLEEP MODALS (Log Session & Goal Setting)
+         ======================================================================= -->
+    <div class="modal-overlay" id="sleepActionModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title" id="sleepModalTitle">🌙 Sleep Tracking Actions</h3>
+                <button type="button" class="modal-close-btn" onclick="closeSleepModal()">&times;</button>
+            </div>
+
+            <!-- Modal Tabs -->
+            <div class="modal-tabs">
+                <button type="button" class="modal-tab-btn active" id="sleep-tab-log" onclick="switchSleepModalTab('log')">➕ Log Bedtime &amp; Wake</button>
+                <button type="button" class="modal-tab-btn" id="sleep-tab-goal" onclick="switchSleepModalTab('goal')">🎯 Change Target</button>
+            </div>
+
+            <div class="modal-body">
+                
+                <!-- Form 1: Log Sleep Session -->
+                <form action="{{ url_for('add_sleep_route') }}" method="POST" id="form-log-sleep-modal" class="sleep-modal-pane active">
+                    <p class="modal-desc">Enter your bedtime and morning wake-up time:</p>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="modal-bedtime" class="form-label">Bedtime <span class="req">*</span></label>
+                            <input type="time" id="modal-bedtime" name="bedtime" class="form-input" value="23:00" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="modal-wake-time" class="form-label">Wake-up Time <span class="req">*</span></label>
+                            <input type="time" id="modal-wake-time" name="wake_time" class="form-input" value="07:00" required>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="modal-sleep-date" class="form-label">Date</label>
+                            <input type="date" id="modal-sleep-date" name="date" class="form-input" value="{{ today_str }}">
+                        </div>
+                        <div class="form-group">
+                            <label for="modal-quality" class="form-label">Quality Score (1-100)</label>
+                            <input type="number" id="modal-quality" name="quality" class="form-input" min="1" max="100" value="85">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="modal-notes" class="form-label">Notes (Optional)</label>
+                        <input type="text" id="modal-notes" name="notes" class="form-input" placeholder="e.g. Good rest, meditation before bed">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">Save Sleep Session &rarr;</button>
+                </form>
+
+                <!-- Form 2: Set Daily Sleep Goal -->
+                <form action="{{ url_for('set_sleep_goal_route') }}" method="POST" id="form-goal-sleep-modal" class="sleep-modal-pane" style="display: none;">
+                    <p class="modal-desc">Set your daily target sleep duration (hours/night):</p>
+                    
+                    <div class="quick-preset-chips">
+                        <button type="button" class="chip" onclick="document.getElementById('input-sleep-goal-val').value = 7.0">7.0 Hours</button>
+                        <button type="button" class="chip" onclick="document.getElementById('input-sleep-goal-val').value = 7.5">7.5 Hours</button>
+                        <button type="button" class="chip" onclick="document.getElementById('input-sleep-goal-val').value = 8.0">8.0 Hours (Recommended)</button>
+                        <button type="button" class="chip" onclick="document.getElementById('input-sleep-goal-val').value = 8.5">8.5 Hours</button>
+                        <button type="button" class="chip" onclick="document.getElementById('input-sleep-goal-val').value = 9.0">9.0 Hours</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="input-sleep-goal-val" class="form-label">Daily Sleep Target (Hours) <span class="req">*</span></label>
+                        <input type="number" id="input-sleep-goal-val" name="daily_sleep_goal_hours" step="0.5" class="form-input" min="4" max="14" value="{{ today.goal_hours }}" required>
+                        <span class="field-hint">Standard adult recommendation: 7 to 9 hours nightly</span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">Save Sleep Goal &rarr;</button>
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Injection for Chart.js -->
+    <script id="sleep-chart-payload" type="application/json">
+        {
+            "labels": {{ weekly.labels | tojson }},
+            "hours": {{ weekly.hours | tojson }},
+            "qualities": {{ weekly.qualities | tojson }},
+            "goal": {{ weekly.goal_hours }}
+        }
+    </script>
+
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

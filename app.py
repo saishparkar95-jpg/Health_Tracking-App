@@ -1,6 +1,6 @@
 """
 HealthTrack AI - Main Flask Application
-Step 6: Water Tracking Module (Quick Presets, Custom Amounts, Daily Goal, History & Weekly Charts)
+Step 7: Sleep Tracking Module (Bedtime, Wake-up, Automatic Duration, Goals & Weekly Charts)
 """
 
 import os
@@ -16,7 +16,6 @@ from auth import (
 from dashboard_service import (
     get_user_dashboard_metrics,
     ensure_user_has_initial_data,
-    log_user_sleep,
     log_user_weight,
     log_user_heart_rate
 )
@@ -32,6 +31,12 @@ from water_service import (
     add_water_intake,
     set_user_water_goal,
     delete_user_water_log
+)
+from sleep_service import (
+    get_sleep_module_data,
+    add_sleep_record,
+    set_user_sleep_goal,
+    delete_user_sleep_record
 )
 
 # 1. Initialize Flask Application
@@ -74,7 +79,7 @@ def home():
     app_info = {
         "name": "HealthTrack AI",
         "tagline": "Your Modern Personal Health & Wellness Companion",
-        "version": "1.5.0 (Step 6 - Water Tracking Ready)"
+        "version": "1.6.0 (Step 7 - Sleep Tracking Ready)"
     }
     return render_template('index.html', info=app_info)
 
@@ -300,15 +305,6 @@ def delete_step_record_route(record_id):
 @app.route('/water')
 @login_required
 def water_page():
-    """
-    Dedicated Water Tracking Module page:
-    - Today's Water Progress & Visual Liquid Bottle
-    - Quick Preset Buttons (+250ml, +500ml, +750ml, +1000ml)
-    - Custom Amount Logger & Beverage Selection
-    - Daily Water Goal Setting
-    - Weekly Chart.js Hydration Trends
-    - Water Intake History Log with Single Record Deletion
-    """
     user_id = session.get("user_id")
     ensure_user_has_initial_data(user_id)
     water_data = get_water_module_data(user_id)
@@ -319,10 +315,6 @@ def water_page():
 @app.route('/log/water', methods=['POST'], endpoint='log_water_route')
 @login_required
 def add_water_route():
-    """
-    Records water intake in milliliters.
-    Prevents negative or unreasonable values.
-    """
     user_id = session.get("user_id")
     amount = request.form.get("amount_ml")
     beverage = request.form.get("beverage_type") or "Water"
@@ -343,9 +335,6 @@ def add_water_route():
 @app.route('/water/goal', methods=['POST'])
 @login_required
 def set_water_goal_route():
-    """
-    Updates the user's daily hydration goal.
-    """
     user_id = session.get("user_id")
     new_goal = request.form.get("daily_water_goal_ml")
     redirect_target = request.form.get("redirect") or url_for("water_page")
@@ -364,9 +353,6 @@ def set_water_goal_route():
 @app.route('/water/delete/<int:log_id>', methods=['POST'])
 @login_required
 def delete_water_log_route(log_id):
-    """
-    Deletes an individual water log.
-    """
     user_id = session.get("user_id")
     success = delete_user_water_log(user_id, log_id)
     if success:
@@ -376,21 +362,114 @@ def delete_water_log_route(log_id):
     return redirect(url_for("water_page"))
 
 
-# 11. Quick Logging Endpoints for Sleep, Weight, Heart Rate
-@app.route('/log/sleep', methods=['POST'])
+# =============================================================================
+# 11. SLEEP TRACKING MODULE ROUTES (STEP 7)
+# =============================================================================
+
+@app.route('/sleep')
 @login_required
-def log_sleep_route():
+def sleep_page():
+    """
+    Dedicated Sleep Tracking Module page:
+    - Today's / Latest Sleep stats & progress against daily goal
+    - Bedtime & Wake-up Time logging with automatic cross-midnight duration
+    - Deep, REM, and Light sleep stages calculation
+    - Weekly (7-day) Chart.js sleep trends
+    - Sleep History Log with single record deletion
+    """
     user_id = session.get("user_id")
-    hours = request.form.get("hours") or 8.0
+    ensure_user_has_initial_data(user_id)
+    sleep_data = get_sleep_module_data(user_id)
+    return render_template('sleep.html', **sleep_data)
+
+
+@app.route('/sleep/add', methods=['POST'], endpoint='add_sleep_route')
+@app.route('/log/sleep', methods=['POST'], endpoint='log_sleep_route')
+@login_required
+def add_sleep_route():
+    """
+    Logs a sleep session:
+    - Accepts Bedtime and Wake-up time (e.g. 23:00 to 07:30)
+    - Automatically calculates duration handling cross-midnight periods
+    - Also supports direct hour entry if provided
+    """
+    user_id = session.get("user_id")
+    bedtime = request.form.get("bedtime")
+    wake_time = request.form.get("wake_time")
+    hours_direct = request.form.get("hours")
+    sleep_date = request.form.get("date") or None
     quality = request.form.get("quality") or 85
+    notes = request.form.get("notes") or None
+    redirect_target = request.form.get("redirect") or request.referrer or url_for("sleep_page")
+
     try:
-        log_user_sleep(user_id, float(hours), int(quality))
-        flash(f"Logged {float(hours)} hrs of sleep (Quality: {int(quality)}%)!", "success")
+        if not bedtime or not wake_time:
+            if hours_direct:
+                # Direct hour logging fallback
+                h_val = float(hours_direct)
+                # Assume standard 23:00 to wake-up calculation
+                bedtime = "23:00"
+                wake_mins = int((23 * 60 + h_val * 60) % 1440)
+                wake_time = f"{wake_mins // 60:02d}:{wake_mins % 60:02d}"
+            else:
+                raise ValueError("Please provide both bedtime and wake-up time.")
+
+        duration_mins = add_sleep_record(
+            user_id=user_id,
+            bedtime_str=bedtime,
+            wake_time_str=wake_time,
+            sleep_date_str=sleep_date,
+            quality_score=quality,
+            notes=notes
+        )
+        h_res = duration_mins // 60
+        m_res = duration_mins % 60
+        flash(f"Successfully logged {h_res}h {m_res}m of sleep (Quality: {quality}%)!", "success")
+    except ValueError as err:
+        flash(str(err), "danger")
     except Exception as e:
-        flash("Failed to log sleep entry.", "danger")
-    return redirect(request.referrer or url_for("dashboard"))
+        flash("An error occurred while saving sleep record.", "danger")
+
+    return redirect(redirect_target)
 
 
+@app.route('/sleep/goal', methods=['POST'])
+@login_required
+def set_sleep_goal_route():
+    """
+    Updates the user's daily sleep target in hours.
+    """
+    user_id = session.get("user_id")
+    new_goal = request.form.get("daily_sleep_goal_hours")
+    redirect_target = request.form.get("redirect") or url_for("sleep_page")
+
+    try:
+        saved_goal = set_user_sleep_goal(user_id, new_goal)
+        flash(f"Daily sleep goal updated to {saved_goal} hours!", "success")
+    except ValueError as err:
+        flash(str(err), "danger")
+    except Exception as e:
+        flash("Failed to update daily sleep goal.", "danger")
+
+    return redirect(redirect_target)
+
+
+@app.route('/sleep/delete/<int:record_id>', methods=['POST'])
+@login_required
+def delete_sleep_record_route(record_id):
+    """
+    Deletes a sleep entry.
+    """
+    user_id = session.get("user_id")
+    success = delete_user_sleep_record(user_id, record_id)
+    if success:
+        flash("Sleep record deleted successfully.", "info")
+    else:
+        flash("Sleep record could not be found or unauthorized.", "danger")
+    return redirect(url_for("sleep_page"))
+
+
+# 12. Quick Logging Endpoints for Weight & Heart Rate
 @app.route('/log/weight', methods=['POST'])
 @login_required
 def log_weight_route():
@@ -420,7 +499,7 @@ def log_heart_rate_route():
     return redirect(request.referrer or url_for("dashboard"))
 
 
-# 12. Application Entry Point
+# 13. Application Entry Point
 if __name__ == '__main__':
     print("-------------------------------------------------------")
     print("[HealthTrack AI] Initializing SQLite database...")
