@@ -1,6 +1,6 @@
 """
 HealthTrack AI - Main Flask Application
-Step 4: Interactive User Dashboard with Real DB Metrics, Weekly Charts & Navigation
+Step 5: Step Tracking Module (Add/Update Steps, Daily Goal Setting, Weekly/Monthly Charts, History)
 """
 
 import os
@@ -16,11 +16,17 @@ from auth import (
 from dashboard_service import (
     get_user_dashboard_metrics,
     ensure_user_has_initial_data,
-    log_user_activity,
     log_user_water,
     log_user_sleep,
     log_user_weight,
     log_user_heart_rate
+)
+from step_service import (
+    get_step_module_data,
+    add_user_steps,
+    update_user_steps,
+    set_user_step_goal,
+    delete_user_step_record
 )
 
 # 1. Initialize Flask Application
@@ -48,7 +54,7 @@ def login_required(view):
     @functools.wraps(view)
     def wrapped_view(**kwargs):
         if "user_id" not in session:
-            flash("Please log in to access your dashboard.", "warning")
+            flash("Please log in to access your health dashboard.", "warning")
             return redirect(url_for("login", next=request.url))
         return view(**kwargs)
     return wrapped_view
@@ -63,7 +69,7 @@ def home():
     app_info = {
         "name": "HealthTrack AI",
         "tagline": "Your Modern Personal Health & Wellness Companion",
-        "version": "1.3.0 (Step 4 - Dashboard & Analytics Ready)"
+        "version": "1.4.0 (Step 5 - Step Tracking Ready)"
     }
     return render_template('index.html', info=app_info)
 
@@ -116,7 +122,7 @@ def register():
             # Initialize realistic tracking history for immediate chart visualization
             ensure_user_has_initial_data(user["id"])
 
-            flash(f"Welcome to HealthTrack AI, {user['full_name']}! Your health profile is live.", "success")
+            flash(f"Welcome to HealthTrack AI, {user['full_name']}! Your account is ready.", "success")
             return redirect(url_for("dashboard"))
 
         except ValueError as err:
@@ -180,16 +186,12 @@ def logout():
     return redirect(url_for("login"))
 
 
-# 8. User Dashboard Route (Protected - Step 4)
+# 8. User Dashboard Route (Protected)
 @app.route('/dashboard')
 @login_required
 def dashboard():
     """
-    Main HealthTrack AI Dashboard:
-    - Queries actual user database records.
-    - Today's Overview: Steps, Water, Sleep, Weight, Heart Rate.
-    - Progress Cards: Step goal, Water goal, Sleep goal.
-    - Weekly charts data: Steps, Water, Sleep past 7 days.
+    Main HealthTrack AI Dashboard.
     """
     user_id = session.get("user_id")
     ensure_user_has_initial_data(user_id)
@@ -202,29 +204,115 @@ def dashboard():
     return render_template('dashboard.html', **data)
 
 
-# 9. Quick Logging Routes for Interactive Dashboard Updates
-@app.route('/log/steps', methods=['POST'])
+# =============================================================================
+# 9. STEP TRACKING MODULE ROUTES (STEP 5)
+# =============================================================================
+
+@app.route('/steps')
 @login_required
-def log_steps_route():
+def steps_page():
     """
-    Quick log steps endpoint.
+    Dedicated Step Tracking Module page:
+    - Today's Progress Ring, Distance, Calories, Active Time
+    - Goal setting
+    - Weekly (7-day) and Monthly (30-day) Chart.js views
+    - Activity history table with edit/delete
     """
     user_id = session.get("user_id")
-    steps = request.form.get("steps") or 1000
+    ensure_user_has_initial_data(user_id)
+
+    step_data = get_step_module_data(user_id)
+    return render_template('steps.html', **step_data)
+
+
+@app.route('/steps/add', methods=['POST'], endpoint='add_steps_route')
+@app.route('/log/steps', methods=['POST'], endpoint='log_steps_route')
+@login_required
+def add_steps_route():
+    """
+    Adds/increments steps for today or a chosen date.
+    Prevents negative or invalid values.
+    """
+    user_id = session.get("user_id")
+    steps = request.form.get("steps")
+    target_date = request.form.get("date") or None
+    notes = request.form.get("notes") or None
+    redirect_target = request.form.get("redirect") or request.referrer or url_for("dashboard")
+
     try:
-        log_user_activity(user_id, int(steps))
-        flash(f"Successfully logged {int(steps):,} steps!", "success")
+        new_total = add_user_steps(user_id, steps, target_date=target_date, notes=notes)
+        flash(f"Successfully added +{int(steps):,} steps! Today's total is now {new_total:,} steps.", "success")
+    except ValueError as err:
+        flash(str(err), "danger")
     except Exception as e:
-        flash("Failed to log steps. Please enter a valid number.", "danger")
-    return redirect(url_for("dashboard"))
+        flash("An error occurred while logging steps.", "danger")
+
+    return redirect(redirect_target)
 
 
+@app.route('/steps/update', methods=['POST'])
+@login_required
+def update_steps_route():
+    """
+    Sets the exact step count for today or a specified date.
+    """
+    user_id = session.get("user_id")
+    steps = request.form.get("steps")
+    target_date = request.form.get("date") or None
+    notes = request.form.get("notes") or None
+    redirect_target = request.form.get("redirect") or url_for("steps_page")
+
+    try:
+        updated_val = update_user_steps(user_id, steps, target_date=target_date, notes=notes)
+        flash(f"Step count updated to {updated_val:,} steps.", "success")
+    except ValueError as err:
+        flash(str(err), "danger")
+    except Exception as e:
+        flash("Failed to update step count.", "danger")
+
+    return redirect(redirect_target)
+
+
+@app.route('/steps/goal', methods=['POST'])
+@login_required
+def set_step_goal_route():
+    """
+    Updates the user's daily step goal.
+    """
+    user_id = session.get("user_id")
+    new_goal = request.form.get("daily_step_goal")
+    redirect_target = request.form.get("redirect") or url_for("steps_page")
+
+    try:
+        saved_goal = set_user_step_goal(user_id, new_goal)
+        flash(f"Daily step goal updated to {saved_goal:,} steps!", "success")
+    except ValueError as err:
+        flash(str(err), "danger")
+    except Exception as e:
+        flash("Failed to update daily step goal.", "danger")
+
+    return redirect(redirect_target)
+
+
+@app.route('/steps/delete/<int:record_id>', methods=['POST'])
+@login_required
+def delete_step_record_route(record_id):
+    """
+    Deletes an activity record belonging to the logged-in user.
+    """
+    user_id = session.get("user_id")
+    success = delete_user_step_record(user_id, record_id)
+    if success:
+        flash("Activity record deleted successfully.", "info")
+    else:
+        flash("Record could not be found or unauthorized.", "danger")
+    return redirect(url_for("steps_page"))
+
+
+# 10. Quick Logging Endpoints for Other Modules
 @app.route('/log/water', methods=['POST'])
 @login_required
 def log_water_route():
-    """
-    Quick log water endpoint.
-    """
     user_id = session.get("user_id")
     amount = request.form.get("amount_ml") or 250
     beverage = request.form.get("beverage_type") or "Water"
@@ -233,15 +321,12 @@ def log_water_route():
         flash(f"Logged +{int(amount)} ml of {beverage}!", "success")
     except Exception as e:
         flash("Failed to log water intake.", "danger")
-    return redirect(url_for("dashboard"))
+    return redirect(request.referrer or url_for("dashboard"))
 
 
 @app.route('/log/sleep', methods=['POST'])
 @login_required
 def log_sleep_route():
-    """
-    Quick log sleep endpoint.
-    """
     user_id = session.get("user_id")
     hours = request.form.get("hours") or 8.0
     quality = request.form.get("quality") or 85
@@ -250,15 +335,12 @@ def log_sleep_route():
         flash(f"Logged {float(hours)} hrs of sleep (Quality: {int(quality)}%)!", "success")
     except Exception as e:
         flash("Failed to log sleep entry.", "danger")
-    return redirect(url_for("dashboard"))
+    return redirect(request.referrer or url_for("dashboard"))
 
 
 @app.route('/log/weight', methods=['POST'])
 @login_required
 def log_weight_route():
-    """
-    Quick log weight endpoint.
-    """
     user_id = session.get("user_id")
     weight = request.form.get("weight_kg")
     try:
@@ -267,15 +349,12 @@ def log_weight_route():
             flash(f"Weight updated to {float(weight):.1f} kg!", "success")
     except Exception as e:
         flash("Failed to update weight.", "danger")
-    return redirect(url_for("dashboard"))
+    return redirect(request.referrer or url_for("dashboard"))
 
 
 @app.route('/log/heart-rate', methods=['POST'])
 @login_required
 def log_heart_rate_route():
-    """
-    Quick log heart rate endpoint.
-    """
     user_id = session.get("user_id")
     bpm = request.form.get("bpm")
     context = request.form.get("context") or "resting"
@@ -285,10 +364,10 @@ def log_heart_rate_route():
             flash(f"Heart rate {int(bpm)} BPM ({context}) recorded!", "success")
     except Exception as e:
         flash("Failed to record heart rate.", "danger")
-    return redirect(url_for("dashboard"))
+    return redirect(request.referrer or url_for("dashboard"))
 
 
-# 10. Application Entry Point
+# 11. Application Entry Point
 if __name__ == '__main__':
     print("-------------------------------------------------------")
     print("[HealthTrack AI] Initializing SQLite database...")

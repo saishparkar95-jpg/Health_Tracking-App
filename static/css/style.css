@@ -1,6 +1,6 @@
 /* ==========================================================================
    HealthTrack AI - Complete Stylesheet
-   Step 4: Professional Dashboard, Charts, Sidebar, Mobile Nav & Modals
+   Step 5: Step Tracking Module, Radial Ring, Weekly/Monthly Charts & History
    Modern, responsive, glassmorphism dark-slate theme with emerald/cyan accents
    ========================================================================== */
 
@@ -88,7 +88,7 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-/* 4. Typography */
+/* 4. Typography & Utilities */
 h1, h2, h3, h4 {
     font-family: 'Outfit', sans-serif;
     font-weight: 700;
@@ -114,11 +114,19 @@ a:hover {
 
 .text-left { text-align: left; }
 .text-center { text-align: center; }
+.text-right { text-align: right; }
 .text-sm { font-size: 0.875rem; }
 .text-secondary { color: var(--text-secondary); }
+.text-muted { color: var(--text-muted); }
 .text-success { color: var(--primary-light); }
+.font-bold { font-weight: 700; }
 
-/* 5. Container */
+.inline-form {
+    display: inline-block;
+    margin: 0;
+}
+
+/* 5. Containers */
 .container {
     width: 100%;
     max-width: 1140px;
@@ -295,29 +303,10 @@ a:hover {
     to { opacity: 1; transform: translateY(0); }
 }
 
-.alert-danger {
-    background: var(--danger-bg);
-    border: 1px solid var(--danger-border);
-    color: #fca5a5;
-}
-
-.alert-success {
-    background: var(--success-bg);
-    border: 1px solid var(--success-border);
-    color: #6ee7b7;
-}
-
-.alert-warning {
-    background: var(--warning-bg);
-    border: 1px solid var(--warning-border);
-    color: #fde68a;
-}
-
-.alert-info {
-    background: var(--info-bg);
-    border: 1px solid var(--info-border);
-    color: #93c5fd;
-}
+.alert-danger { background: var(--danger-bg); border: 1px solid var(--danger-border); color: #fca5a5; }
+.alert-success { background: var(--success-bg); border: 1px solid var(--success-border); color: #6ee7b7; }
+.alert-warning { background: var(--warning-bg); border: 1px solid var(--warning-border); color: #fde68a; }
+.alert-info { background: var(--info-bg); border: 1px solid var(--info-border); color: #93c5fd; }
 
 .alert-close {
     background: transparent;
@@ -331,8 +320,59 @@ a:hover {
     padding-left: 0.5rem;
 }
 
+/* 9. Forms & Inputs */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 1.1rem;
+}
+
+.form-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.form-label .req {
+    color: var(--primary-light);
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: var(--text-primary);
+    background: var(--bg-input);
+    border: 1px solid var(--border-input);
+    border-radius: var(--radius-md);
+    outline: none;
+    transition: all var(--transition);
+}
+
+.form-input:focus {
+    background: var(--bg-input-focus);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.2rem;
+    padding-right: 2.5rem;
+}
+
+.field-hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
 /* ==========================================================================
-   DASHBOARD STEP 4 LAYOUT (Sidebar, Topbar, Main Wrapper, Mobile Nav)
+   DASHBOARD & STEP TRACKING LAYOUT
    ========================================================================== */
 .dashboard-body {
     display: flex;
@@ -341,7 +381,7 @@ a:hover {
     background-color: var(--bg-main);
 }
 
-/* Desktop Sidebar */
+/* Sidebar */
 .sidebar {
     width: 260px;
     background: var(--bg-sidebar);
@@ -471,7 +511,7 @@ a:hover {
     color: var(--danger);
 }
 
-/* Main Dashboard Wrapper (Offset for sidebar) */
+/* Main Wrapper */
 .dashboard-main-wrapper {
     margin-left: 260px;
     flex: 1;
@@ -508,7 +548,7 @@ a:hover {
 .topbar-right {
     display: flex;
     align-items: center;
-    gap: 1.25rem;
+    gap: 1rem;
 }
 
 .status-indicator {
@@ -532,7 +572,6 @@ a:hover {
     animation: pulse 2s infinite;
 }
 
-/* Content Area */
 .dashboard-content {
     flex: 1;
     padding: 2rem 0 5rem;
@@ -560,251 +599,291 @@ a:hover {
 }
 
 /* ==========================================================================
-   1. TODAY'S OVERVIEW CARDS (5 Cards Grid)
+   STEP TRACKING HERO & CIRCULAR PROGRESS RING (STEP 5)
    ========================================================================== */
-.overview-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-    gap: 1.25rem;
-}
-
-.stat-card {
+.step-hero-card {
     background: var(--bg-card);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--border-subtle);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(16, 185, 129, 0.3);
     border-radius: var(--radius-lg);
-    padding: 1.5rem;
-    box-shadow: var(--shadow-card);
-    transition: all var(--transition);
-    cursor: pointer;
+    padding: 2.25rem;
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 2.5rem;
+    box-shadow: var(--shadow-card);
     position: relative;
     overflow: hidden;
 }
 
-.stat-card:hover {
-    background: var(--bg-card-hover);
-    transform: translateY(-4px);
-}
-
-.stat-card::before {
+.step-hero-card::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 3px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary), var(--accent-cyan));
 }
 
-.stat-card-emerald::before { background: linear-gradient(90deg, var(--primary), var(--primary-light)); }
-.stat-card-emerald:hover { border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 10px 25px rgba(16, 185, 129, 0.15); }
-
-.stat-card-cyan::before { background: linear-gradient(90deg, var(--accent-cyan), #38bdf8); }
-.stat-card-cyan:hover { border-color: rgba(6, 182, 212, 0.4); box-shadow: 0 10px 25px rgba(6, 182, 212, 0.15); }
-
-.stat-card-purple::before { background: linear-gradient(90deg, var(--accent-purple), #c084fc); }
-.stat-card-purple:hover { border-color: rgba(168, 85, 247, 0.4); box-shadow: 0 10px 25px rgba(168, 85, 247, 0.15); }
-
-.stat-card-amber::before { background: linear-gradient(90deg, var(--accent-amber), #fcd34d); }
-.stat-card-amber:hover { border-color: rgba(245, 158, 11, 0.4); box-shadow: 0 10px 25px rgba(245, 158, 11, 0.15); }
-
-.stat-card-rose::before { background: linear-gradient(90deg, var(--accent-rose), #fda4af); }
-.stat-card-rose:hover { border-color: rgba(244, 63, 94, 0.4); box-shadow: 0 10px 25px rgba(244, 63, 94, 0.15); }
-
-.stat-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.85rem;
+/* Radial Ring */
+.ring-container {
+    flex-shrink: 0;
 }
 
-.stat-title {
-    font-size: 0.85rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-secondary);
-}
-
-.stat-icon-wrapper {
-    width: 38px;
-    height: 38px;
-    border-radius: var(--radius-sm);
+.circular-progress-ring {
+    position: relative;
+    width: 160px;
+    height: 160px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
 }
 
-.icon-emerald { background: rgba(16, 185, 129, 0.15); }
-.icon-cyan { background: rgba(6, 182, 212, 0.15); }
-.icon-purple { background: rgba(168, 85, 247, 0.15); }
-.icon-amber { background: rgba(245, 158, 11, 0.15); }
-.icon-rose { background: rgba(244, 63, 94, 0.15); }
-
-.stat-main-number {
-    font-family: 'Outfit', sans-serif;
-    font-size: 2.25rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    line-height: 1.1;
-    margin-bottom: 0.6rem;
+.progress-ring-svg {
+    transform: rotate(-90deg);
+    width: 100%;
+    height: 100%;
 }
 
-.stat-unit {
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-    margin-left: 0.2rem;
+.ring-bg {
+    fill: transparent;
+    stroke: rgba(255, 255, 255, 0.08);
+    stroke-width: 12;
 }
 
-.stat-sub-info {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.6rem;
-    font-size: 0.775rem;
-    color: var(--text-secondary);
-    margin-bottom: 1rem;
+.ring-progress {
+    fill: transparent;
+    stroke-width: 12;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.stat-card-footer {
-    border-top: 1px solid var(--border-subtle);
-    padding-top: 0.75rem;
-    margin-top: auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 0.775rem;
+.ring-emerald {
+    stroke: url(#emeraldGrad);
+    stroke: #10b981;
+    filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.6));
 }
 
-.stat-badge {
-    color: var(--text-muted);
-}
-
-.quick-add-link {
-    color: var(--primary-light);
-    font-weight: 600;
-}
-
-/* Status BMI Badges */
-.badge-status-blue { color: #60a5fa; font-weight: 600; }
-.badge-status-green { color: #34d399; font-weight: 600; }
-.badge-status-yellow { color: #fbbf24; font-weight: 600; }
-.badge-status-red { color: #f87171; font-weight: 600; }
-
-/* ==========================================================================
-   2. PROGRESS CARDS SECTION
-   ========================================================================== */
-.progress-cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 1.5rem;
-}
-
-.progress-card {
-    background: var(--bg-card);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    padding: 1.75rem;
-    box-shadow: var(--shadow-card);
+.ring-center-content {
+    position: absolute;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    transition: all var(--transition);
-}
-
-.progress-card:hover {
-    background: var(--bg-card-hover);
-    border-color: var(--border-glow);
-}
-
-.progress-header {
-    display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+}
+
+.ring-percentage {
+    font-family: 'Outfit', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1;
+}
+
+.ring-label {
+    font-size: 0.725rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.2rem;
+}
+
+/* Step Hero Info */
+.step-hero-info {
+    flex: 1;
+}
+
+.step-count-huge {
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0.5rem 0 0.4rem;
+    line-height: 1.1;
+}
+
+.step-count-sub {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.goal-status-row {
     margin-bottom: 1.25rem;
 }
 
-.progress-title-wrap {
-    display: flex;
+.status-pill-success {
+    display: inline-flex;
     align-items: center;
-    gap: 0.9rem;
-}
-
-.icon-bubble {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.35rem;
-}
-
-.progress-title-wrap h3 {
-    font-size: 1.15rem;
-    margin-bottom: 0.15rem;
-}
-
-.progress-title-wrap p {
+    background: rgba(16, 185, 129, 0.2);
+    border: 1px solid var(--primary);
+    color: #a7f3d0;
     font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.35rem 0.9rem;
+    border-radius: var(--radius-full);
+}
+
+.status-pill-neutral {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.35rem 0.9rem;
+    border-radius: var(--radius-full);
+}
+
+/* Derivative Metrics */
+.derivative-metrics-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.metric-mini-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 0.85rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.mini-icon {
+    font-size: 1.5rem;
+}
+
+.mini-val {
+    display: block;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.1;
+}
+
+.mini-val small {
+    font-size: 0.75rem;
     color: var(--text-secondary);
 }
 
-.progress-percentage-pill {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid var(--border-subtle);
-    padding: 0.35rem 0.85rem;
+.mini-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* Quick Step Bar */
+.quick-step-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.quick-bar-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-right: 0.25rem;
+}
+
+.btn-step-chip {
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    color: var(--primary-light);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.4rem 0.9rem;
     border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.btn-step-chip:hover {
+    background: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 0 12px var(--primary-glow);
+    transform: translateY(-2px);
+}
+
+/* ==========================================================================
+   CHARTS & TAB CONTROLS
+   ========================================================================== */
+.chart-tab-controls {
+    display: flex;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 0.3rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+}
+
+.btn-tab {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.btn-tab.active {
+    background: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.chart-summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.summary-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.summary-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.25rem;
+}
+
+.summary-num {
     font-family: 'Outfit', sans-serif;
-    font-size: 1.1rem;
+    font-size: 1.5rem;
     font-weight: 800;
     color: var(--text-primary);
 }
 
-.progress-percentage-pill.completed {
-    background: rgba(16, 185, 129, 0.2);
-    border-color: var(--primary);
-    color: var(--primary-light);
-}
-
-.progress-bar-track {
-    width: 100%;
-    height: 10px;
-    background: rgba(255, 255, 255, 0.07);
-    border-radius: var(--radius-full);
-    overflow: hidden;
-    margin-bottom: 0.9rem;
-}
-
-.progress-bar-fill {
-    height: 100%;
-    border-radius: var(--radius-full);
-    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.fill-emerald { background: linear-gradient(90deg, var(--primary), var(--primary-light)); box-shadow: 0 0 10px var(--primary-glow); }
-.fill-cyan { background: linear-gradient(90deg, var(--accent-cyan), #38bdf8); box-shadow: 0 0 10px rgba(6, 182, 212, 0.4); }
-.fill-purple { background: linear-gradient(90deg, var(--accent-purple), #c084fc); box-shadow: 0 0 10px rgba(168, 85, 247, 0.4); }
-
-.progress-footer-text {
-    font-size: 0.825rem;
+.summary-num small {
+    font-size: 0.8rem;
     color: var(--text-secondary);
+    font-weight: 500;
 }
 
-/* ==========================================================================
-   3. WEEKLY CHARTS SECTION (Chart.js Containers)
-   ========================================================================== */
-.charts-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-}
-
+/* Chart Canvas Card */
 .chart-card {
     background: var(--bg-card);
     backdrop-filter: blur(16px);
@@ -818,7 +897,7 @@ a:hover {
 }
 
 .chart-card-wide {
-    grid-column: 1 / -1;
+    width: 100%;
 }
 
 .chart-card-header {
@@ -847,32 +926,108 @@ a:hover {
     font-weight: 700;
 }
 
-.badge-cyan {
-    background: rgba(6, 182, 212, 0.15);
-    color: var(--accent-cyan);
-    padding: 0.25rem 0.75rem;
-    border-radius: var(--radius-full);
-    font-size: 0.775rem;
-    font-weight: 700;
-}
-
-.badge-purple {
-    background: rgba(168, 85, 247, 0.15);
-    color: var(--accent-purple);
-    padding: 0.25rem 0.75rem;
-    border-radius: var(--radius-full);
-    font-size: 0.775rem;
-    font-weight: 700;
-}
-
 .chart-canvas-wrapper {
     position: relative;
     width: 100%;
-    height: 280px;
 }
 
 /* ==========================================================================
-   4. MODAL DIALOGS & QUICK LOG
+   ACTIVITY HISTORY TABLE
+   ========================================================================== */
+.history-table-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-card);
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.custom-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.925rem;
+}
+
+.custom-table th {
+    text-align: left;
+    padding: 0.85rem 1rem;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.custom-table td {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
+    vertical-align: middle;
+}
+
+.custom-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.step-cell {
+    color: var(--primary-light);
+    font-size: 1.05rem;
+}
+
+.badge-mini-today {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--primary-light);
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: var(--radius-sm);
+    margin-left: 0.35rem;
+}
+
+.btn-delete-icon {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    opacity: 0.6;
+    transition: opacity var(--transition);
+    padding: 0.3rem 0.5rem;
+}
+
+.btn-delete-icon:hover {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1.5rem;
+}
+
+.empty-icon {
+    font-size: 3rem;
+    margin-bottom: 0.75rem;
+    display: block;
+}
+
+.empty-state h3 {
+    margin-bottom: 0.4rem;
+}
+
+.empty-state p {
+    color: var(--text-secondary);
+    margin-bottom: 1.25rem;
+}
+
+/* ==========================================================================
+   MODALS
    ========================================================================== */
 .modal-overlay {
     position: fixed;
@@ -920,18 +1075,12 @@ a:hover {
     font-size: 1.75rem;
     cursor: pointer;
     line-height: 1;
-    transition: color var(--transition);
-}
-
-.modal-close-btn:hover {
-    color: #ffffff;
 }
 
 .modal-tabs {
     display: flex;
     background: rgba(0, 0, 0, 0.2);
     border-bottom: 1px solid var(--border-subtle);
-    overflow-x: auto;
 }
 
 .modal-tab-btn {
@@ -945,11 +1094,6 @@ a:hover {
     color: var(--text-secondary);
     cursor: pointer;
     transition: all var(--transition);
-    white-space: nowrap;
-}
-
-.modal-tab-btn:hover {
-    color: var(--text-primary);
 }
 
 .modal-tab-btn.active {
@@ -994,7 +1138,7 @@ a:hover {
 }
 
 /* ==========================================================================
-   5. MOBILE BOTTOM NAVIGATION (Hidden on Desktop)
+   MOBILE BOTTOM NAVIGATION
    ========================================================================== */
 .mobile-bottom-nav {
     display: none;
@@ -1053,31 +1197,34 @@ a:hover {
 }
 
 /* ==========================================================================
-   6. RESPONSIVE BREAKPOINTS
+   RESPONSIVE
    ========================================================================== */
 @media (max-width: 1024px) {
-    /* Hide Desktop Sidebar */
-    .sidebar {
-        display: none;
-    }
-    
-    /* Reset main wrapper margin */
-    .dashboard-main-wrapper {
-        margin-left: 0;
-        padding-bottom: 70px;
-    }
-    
-    /* Show Mobile Bottom Navigation */
-    .mobile-bottom-nav {
-        display: flex;
-    }
-
-    .charts-grid {
-        grid-template-columns: 1fr;
-    }
+    .sidebar { display: none; }
+    .dashboard-main-wrapper { margin-left: 0; padding-bottom: 70px; }
+    .mobile-bottom-nav { display: flex; }
 }
 
 @media (max-width: 768px) {
+    .step-hero-card {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 1.5rem 1.25rem;
+    }
+
+    .derivative-metrics-row {
+        grid-template-columns: 1fr;
+    }
+
+    .quick-step-bar {
+        justify-content: center;
+    }
+
+    .step-count-huge {
+        font-size: 2.2rem;
+    }
+
     .dashboard-container {
         padding-left: 1rem;
         padding-right: 1rem;
@@ -1093,13 +1240,5 @@ a:hover {
     .topbar-right {
         width: 100%;
         justify-content: space-between;
-    }
-
-    .stat-main-number {
-        font-size: 1.85rem;
-    }
-    
-    .progress-cards-grid {
-        grid-template-columns: 1fr;
     }
 }

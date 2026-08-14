@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="HealthTrack AI - Step Tracking, Daily Goals, Walking Distance and Activity History">
+    <title>Step Tracking - HealthTrack AI</title>
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- Custom CSS Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="dashboard-body">
+
+    <!-- Desktop Sidebar Navigation -->
+    <aside class="sidebar" id="desktop-sidebar">
+        <div class="sidebar-header">
+            <a href="/" class="brand-logo">
+                <span class="brand-icon">⚡</span>
+                <span class="brand-text">HealthTrack <span class="ai-highlight">AI</span></span>
+            </a>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('dashboard') }}" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Dashboard</span>
+            </a>
+            <a href="{{ url_for('steps_page') }}" class="nav-item active">
+                <span class="nav-icon">👟</span>
+                <span class="nav-label">Step Tracking</span>
+            </a>
+            <a href="{{ url_for('dashboard') }}#overview-section" class="nav-item">
+                <span class="nav-icon">💧</span>
+                <span class="nav-label">Hydration</span>
+            </a>
+            <a href="{{ url_for('dashboard') }}#overview-section" class="nav-item">
+                <span class="nav-icon">🌙</span>
+                <span class="nav-label">Sleep Rest</span>
+            </a>
+            <button type="button" class="nav-item btn-sidebar-action" onclick="openStepModal('add')">
+                <span class="nav-icon">➕</span>
+                <span class="nav-label">Add Steps Now</span>
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-badge">
+                <div class="user-avatar">
+                    {{ current_user.full_name[:1].upper() if current_user.full_name else 'U' }}
+                </div>
+                <div class="user-meta">
+                    <span class="user-name">{{ current_user.full_name }}</span>
+                    <span class="user-handle">@{{ current_user.username }}</span>
+                </div>
+            </div>
+            <a href="{{ url_for('logout') }}" class="btn-logout" title="Sign Out">
+                <span>🚪</span> Sign Out
+            </a>
+        </div>
+    </aside>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+        <a href="{{ url_for('dashboard') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">📊</span>
+            <span class="mobile-nav-text">Home</span>
+        </a>
+        <a href="{{ url_for('steps_page') }}" class="mobile-nav-item active">
+            <span class="mobile-nav-icon">👟</span>
+            <span class="mobile-nav-text">Steps</span>
+        </a>
+        <button type="button" class="mobile-nav-item mobile-nav-btn" onclick="openStepModal('add')">
+            <span class="mobile-nav-icon highlight">➕</span>
+            <span class="mobile-nav-text">Log</span>
+        </button>
+        <a href="#step-charts-section" class="mobile-nav-item">
+            <span class="mobile-nav-icon">📈</span>
+            <span class="mobile-nav-text">Trends</span>
+        </a>
+        <a href="{{ url_for('logout') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">🚪</span>
+            <span class="mobile-nav-text">Logout</span>
+        </a>
+    </nav>
+
+    <!-- Main Content Wrapper -->
+    <div class="dashboard-main-wrapper">
+        
+        <!-- Topbar -->
+        <header class="dashboard-topbar">
+            <div class="topbar-left">
+                <h1 class="page-heading">👟 Step Tracking Module</h1>
+                <p class="date-badge">📅 {{ today_str }} &bull; Step Tracking &amp; Activity Log</p>
+            </div>
+            <div class="topbar-right">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="openStepModal('goal')">
+                    🎯 Daily Goal: {{ "{:,}".format(today.goal) }}
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="openStepModal('add')">
+                    ➕ Add Steps
+                </button>
+            </div>
+        </header>
+
+        <!-- Flash Messages -->
+        <div class="dashboard-container flash-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span>{{ message }}</span>
+                            <button type="button" class="alert-close" onclick="this.parentElement.remove();">&times;</button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <main class="dashboard-content">
+            <div class="dashboard-container">
+
+                <!-- 1. HERO SECTION: RADIAL PROGRESS RING & TODAY'S STEP METRICS -->
+                <section class="dash-section">
+                    <div class="step-hero-card">
+                        
+                        <!-- Left: Circular Progress Ring -->
+                        <div class="ring-container">
+                            <div class="circular-progress-ring">
+                                <svg class="progress-ring-svg" viewBox="0 0 160 160">
+                                    <circle class="ring-bg" cx="80" cy="80" r="68"></circle>
+                                    <circle 
+                                        class="ring-progress ring-emerald" 
+                                        cx="80" 
+                                        cy="80" 
+                                        r="68" 
+                                        style="stroke-dasharray: 427.26; stroke-dashoffset: {{ 427.26 - (427.26 * (today.goal_pct / 100)) }};"
+                                    ></circle>
+                                </svg>
+                                <div class="ring-center-content">
+                                    <span class="ring-percentage">{{ today.goal_pct }}%</span>
+                                    <span class="ring-label">of daily goal</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Center: Main Steps Stats -->
+                        <div class="step-hero-info">
+                            <span class="badge">Today's Step Progress</span>
+                            <h2 class="step-count-huge">
+                                {{ "{:,}".format(today.steps) }}
+                                <span class="step-count-sub">/ {{ "{:,}".format(today.goal) }} steps</span>
+                            </h2>
+                            
+                            <div class="goal-status-row">
+                                {% if today.is_goal_met %}
+                                    <span class="status-pill-success">🎉 Daily Step Goal Met! (+{{ "{:,}".format(today.steps - today.goal) }} surplus)</span>
+                                {% else %}
+                                    <span class="status-pill-neutral">🎯 {{ "{:,}".format(today.remaining) }} steps remaining today</span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Derivative Metrics -->
+                            <div class="derivative-metrics-row">
+                                <div class="metric-mini-card">
+                                    <span class="mini-icon">📍</span>
+                                    <div>
+                                        <span class="mini-val">{{ today.distance_km }} <small>km</small></span>
+                                        <span class="mini-label">Distance Walked</span>
+                                    </div>
+                                </div>
+
+                                <div class="metric-mini-card">
+                                    <span class="mini-icon">🔥</span>
+                                    <div>
+                                        <span class="mini-val">{{ today.calories_burned }} <small>kcal</small></span>
+                                        <span class="mini-label">Calories Burned</span>
+                                    </div>
+                                </div>
+
+                                <div class="metric-mini-card">
+                                    <span class="mini-icon">⏱️</span>
+                                    <div>
+                                        <span class="mini-val">{{ today.active_minutes }} <small>mins</small></span>
+                                        <span class="mini-label">Active Walking</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Quick Preset Increment Buttons -->
+                            <div class="quick-step-bar">
+                                <span class="quick-bar-label">Quick Add:</span>
+                                <form action="{{ url_for('add_steps_route') }}" method="POST" class="inline-form">
+                                    <input type="hidden" name="steps" value="500">
+                                    <button type="submit" class="btn-step-chip">+500</button>
+                                </form>
+                                <form action="{{ url_for('add_steps_route') }}" method="POST" class="inline-form">
+                                    <input type="hidden" name="steps" value="1000">
+                                    <button type="submit" class="btn-step-chip">+1,000</button>
+                                </form>
+                                <form action="{{ url_for('add_steps_route') }}" method="POST" class="inline-form">
+                                    <input type="hidden" name="steps" value="2500">
+                                    <button type="submit" class="btn-step-chip">+2,500</button>
+                                </form>
+                                <form action="{{ url_for('add_steps_route') }}" method="POST" class="inline-form">
+                                    <input type="hidden" name="steps" value="5000">
+                                    <button type="submit" class="btn-step-chip">+5,000</button>
+                                </form>
+                                
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="openStepModal('update')">
+                                    ✏️ Edit Count
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+
+                <!-- 2. WEEKLY & MONTHLY STEP CHARTS SECTION -->
+                <section class="dash-section" id="step-charts-section">
+                    <div class="section-header-row">
+                        <div>
+                            <h2 class="dash-section-title">Step Activity Visualizer</h2>
+                            <p class="dash-section-sub">Compare daily walk trends over weekly and monthly periods</p>
+                        </div>
+                        
+                        <!-- Toggle Tab Buttons -->
+                        <div class="chart-tab-controls">
+                            <button type="button" class="btn-tab active" id="btn-show-weekly" onclick="showChartPeriod('weekly')">
+                                📅 Weekly (7 Days)
+                            </button>
+                            <button type="button" class="btn-tab" id="btn-show-monthly" onclick="showChartPeriod('monthly')">
+                                🗓️ Monthly (30 Days)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Summary Stats Bar -->
+                    <div class="chart-summary-cards">
+                        <div class="summary-box">
+                            <span class="summary-title">7-Day Total</span>
+                            <span class="summary-num">{{ "{:,}".format(weekly.total) }} <small>steps</small></span>
+                        </div>
+                        <div class="summary-box">
+                            <span class="summary-title">7-Day Daily Avg</span>
+                            <span class="summary-num">{{ "{:,}".format(weekly.avg) }} <small>steps/day</small></span>
+                        </div>
+                        <div class="summary-box">
+                            <span class="summary-title">30-Day Total</span>
+                            <span class="summary-num">{{ "{:,}".format(monthly.total) }} <small>steps</small></span>
+                        </div>
+                        <div class="summary-box">
+                            <span class="summary-title">30-Day Best Day</span>
+                            <span class="summary-num text-success">🏆 {{ "{:,}".format(monthly.best_day) }} <small>steps</small></span>
+                        </div>
+                    </div>
+
+                    <!-- Chart Card Container -->
+                    <div class="chart-card chart-card-wide">
+                        <div class="chart-card-header">
+                            <div>
+                                <h3 class="chart-title" id="chart-dynamic-title">👟 Weekly Walking Steps</h3>
+                                <p class="chart-sub" id="chart-dynamic-sub">Steps logged per day vs {{ "{:,}".format(today.goal) }} step target</p>
+                            </div>
+                            <span class="badge-emerald" id="chart-period-badge">7-Day Active</span>
+                        </div>
+                        <div class="chart-canvas-wrapper" style="height: 320px;">
+                            <canvas id="stepTrendChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- 3. ACTIVITY HISTORY TABLE SECTION -->
+                <section class="dash-section">
+                    <div class="section-header-row">
+                        <div>
+                            <h2 class="dash-section-title">Step Activity History</h2>
+                            <p class="dash-section-sub">Your logged historical activity records stored in SQLite</p>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="openStepModal('add')">
+                            ➕ Log Past Day
+                        </button>
+                    </div>
+
+                    <div class="history-table-card">
+                        {% if history %}
+                            <div class="table-responsive">
+                                <table class="custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Steps</th>
+                                            <th>Distance</th>
+                                            <th>Calories</th>
+                                            <th>Active Time</th>
+                                            <th>Goal Status</th>
+                                            <th>Notes</th>
+                                            <th class="text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for rec in history %}
+                                            <tr>
+                                                <td class="font-bold">
+                                                    📅 {{ rec.activity_date }}
+                                                    {% if rec.activity_date == today_str %}
+                                                        <span class="badge-mini-today">Today</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="step-cell font-bold">
+                                                    {{ "{:,}".format(rec.steps) }}
+                                                </td>
+                                                <td>{{ rec.distance_km }} km</td>
+                                                <td>{{ rec.calories_burned }} kcal</td>
+                                                <td>{{ rec.active_minutes }} mins</td>
+                                                <td>
+                                                    {% if rec.steps >= today.goal %}
+                                                        <span class="badge-status-green">&#10003; Target Met</span>
+                                                    {% else %}
+                                                        <span class="badge-status-yellow">{{ ((rec.steps / today.goal) * 100) | round | int }}% Goal</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-muted text-sm">
+                                                    {{ rec.notes if rec.notes else '—' }}
+                                                </td>
+                                                <td class="text-right">
+                                                    <form action="{{ url_for('delete_step_record_route', record_id=rec.id) }}" method="POST" class="inline-form" onsubmit="return confirm('Are you sure you want to delete this step log?');">
+                                                        <button type="submit" class="btn-delete-icon" title="Delete log">🗑️</button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="empty-state">
+                                <span class="empty-icon">👟</span>
+                                <h3>No activity logged yet</h3>
+                                <p>Start tracking your daily steps to view your history!</p>
+                                <button type="button" class="btn btn-primary btn-sm" onclick="openStepModal('add')">
+                                    Log First Walk &rarr;
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </section>
+
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container footer-content">
+                <p>&copy; 2026 HealthTrack AI &bull; Step Tracking Module</p>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- =======================================================================
+         STEP MODALS (Add Steps, Update Steps, Set Goal)
+         ======================================================================= -->
+    <div class="modal-overlay" id="stepActionModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title" id="stepModalTitle">👟 Step Tracking Actions</h3>
+                <button type="button" class="modal-close-btn" onclick="closeStepModal()">&times;</button>
+            </div>
+
+            <!-- Modal Tabs -->
+            <div class="modal-tabs">
+                <button type="button" class="modal-tab-btn active" id="tab-add" onclick="switchStepModalTab('add')">➕ Add Steps</button>
+                <button type="button" class="modal-tab-btn" id="tab-update" onclick="switchStepModalTab('update')">✏️ Edit Total</button>
+                <button type="button" class="modal-tab-btn" id="tab-goal" onclick="switchStepModalTab('goal')">🎯 Change Goal</button>
+            </div>
+
+            <div class="modal-body">
+                
+                <!-- Form 1: Add Steps (Increment) -->
+                <form action="{{ url_for('add_steps_route') }}" method="POST" id="form-add-steps" class="step-modal-pane active">
+                    <p class="modal-desc">Add steps to today's or a past day's record:</p>
+                    
+                    <div class="form-group">
+                        <label for="add-steps-input" class="form-label">Steps to Add <span class="req">*</span></label>
+                        <input type="number" id="add-steps-input" name="steps" class="form-input" placeholder="e.g. 2500" min="1" max="100000" value="1000" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="add-date-input" class="form-label">Date</label>
+                        <input type="date" id="add-date-input" name="date" class="form-input" value="{{ today_str }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="add-notes-input" class="form-label">Notes (Optional)</label>
+                        <input type="text" id="add-notes-input" name="notes" class="form-input" placeholder="e.g. Morning park run, treadmill walk">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">Add Steps &rarr;</button>
+                </form>
+
+                <!-- Form 2: Update Exact Total -->
+                <form action="{{ url_for('update_steps_route') }}" method="POST" id="form-update-steps" class="step-modal-pane" style="display: none;">
+                    <p class="modal-desc">Set the exact step count for a specific day:</p>
+                    
+                    <div class="form-group">
+                        <label for="update-steps-input" class="form-label">Exact Step Count <span class="req">*</span></label>
+                        <input type="number" id="update-steps-input" name="steps" class="form-input" placeholder="e.g. 10450" min="0" max="150000" value="{{ today.steps }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="update-date-input" class="form-label">Date</label>
+                        <input type="date" id="update-date-input" name="date" class="form-input" value="{{ today_str }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="update-notes-input" class="form-label">Notes (Optional)</label>
+                        <input type="text" id="update-notes-input" name="notes" class="form-input" placeholder="e.g. Corrected manual entry">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">Update Count &rarr;</button>
+                </form>
+
+                <!-- Form 3: Set Daily Step Goal -->
+                <form action="{{ url_for('set_step_goal_route') }}" method="POST" id="form-goal-steps" class="step-modal-pane" style="display: none;">
+                    <p class="modal-desc">Update your daily walking target (steps/day):</p>
+                    
+                    <div class="quick-preset-chips">
+                        <button type="button" class="chip" onclick="document.getElementById('goal-steps-input').value = 6000">6,000</button>
+                        <button type="button" class="chip" onclick="document.getElementById('goal-steps-input').value = 8000">8,000</button>
+                        <button type="button" class="chip" onclick="document.getElementById('goal-steps-input').value = 10000">10,000</button>
+                        <button type="button" class="chip" onclick="document.getElementById('goal-steps-input').value = 12500">12,500</button>
+                        <button type="button" class="chip" onclick="document.getElementById('goal-steps-input').value = 15000">15,000</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="goal-steps-input" class="form-label">Daily Goal Target (steps) <span class="req">*</span></label>
+                        <input type="number" id="goal-steps-input" name="daily_step_goal" class="form-input" min="1000" max="100000" value="{{ today.goal }}" required>
+                        <span class="field-hint">Recommended standard: 8,000 - 10,000 steps daily</span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">Save New Goal &rarr;</button>
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Injection for Chart.js -->
+    <script id="step-chart-payload" type="application/json">
+        {
+            "weekly": {{ weekly | tojson }},
+            "monthly": {{ monthly | tojson }},
+            "goal": {{ today.goal }}
+        }
+    </script>
+
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
