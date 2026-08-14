@@ -1,4 +1,4 @@
-venv\Scripts\activate<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -6,7 +6,7 @@ venv\Scripts\activate<!DOCTYPE html>
     <meta name="description" content="HealthTrack AI - Modern Health and Wellness Tracking Web Application">
     <title>{{ info.name }} - {{ info.tagline }}</title>
     
-    <!-- Link to our Custom CSS Stylesheet in static/css/style.css -->
+    <!-- Custom CSS Stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -18,12 +18,33 @@ venv\Scripts\activate<!DOCTYPE html>
                 <span class="brand-icon">⚡</span>
                 <span class="brand-text">HealthTrack <span class="ai-highlight">AI</span></span>
             </a>
-            <div class="status-pill">
-                <span class="pulse-dot"></span>
-                <span>{{ info.version }}</span>
-            </div>
+            
+            <nav class="nav-links">
+                {% if current_user %}
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-sm">Dashboard</a>
+                    <span class="nav-user-pill">👤 {{ current_user.full_name }}</span>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline btn-sm">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-secondary btn-sm">Sign In</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-primary btn-sm">Get Started</a>
+                {% endif %}
+            </nav>
         </div>
     </header>
+
+    <!-- Flash Messages Container -->
+    <div class="container flash-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <span>{{ message }}</span>
+                        <button type="button" class="alert-close" onclick="this.parentElement.remove();">&times;</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
 
     <!-- Main Content Container -->
     <main class="main-content">
@@ -31,20 +52,24 @@ venv\Scripts\activate<!DOCTYPE html>
             
             <!-- Hero Section -->
             <section class="hero-section">
-                <span class="badge">Step 1: Basic Project Setup</span>
+                <span class="badge">Step 3: User Authentication & Profiles Active</span>
                 <h1 class="hero-title">Welcome to <span class="gradient-text">{{ info.name }}</span></h1>
                 <p class="hero-subtitle">
-                    {{ info.tagline }}. Built with Python Flask, SQLite, Vanilla HTML5/CSS3/JavaScript, and Chart.js.
+                    {{ info.tagline }}. Intelligent activity monitoring, hydration logging, sleep analytics, and personalized goal tracking.
                 </p>
                 <div class="hero-buttons">
-                    <button class="btn btn-primary" id="explore-btn">Explore Features &darr;</button>
-                    <a href="#roadmap" class="btn btn-secondary">View 15-Step Roadmap</a>
+                    {% if current_user %}
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Go to My Dashboard &rarr;</a>
+                    {% else %}
+                        <a href="{{ url_for('register') }}" class="btn btn-primary">Create Free Account &rarr;</a>
+                        <a href="{{ url_for('login') }}" class="btn btn-secondary">Sign In</a>
+                    {% endif %}
                 </div>
             </section>
 
             <!-- Planned Features Grid -->
             <section class="features-section">
-                <h2 class="section-title">Core Health Features Coming Up</h2>
+                <h2 class="section-title">Core Health Features</h2>
                 <div class="features-grid">
                     
                     <div class="feature-card">
@@ -67,54 +92,54 @@ venv\Scripts\activate<!DOCTYPE html>
 
                     <div class="feature-card">
                         <div class="card-icon">⚖️</div>
-                        <h3>Weight & Informational BMI</h3>
-                        <p>Monitor weight trends over time with informational health metrics.</p>
+                        <h3>Weight & BMI</h3>
+                        <p>Monitor weight trends over time with automated BMI calculations.</p>
                     </div>
 
                     <div class="feature-card">
                         <div class="card-icon">❤️</div>
                         <h3>Heart Rate Logs</h3>
-                        <p>Manual resting heart-rate logging and historical activity insights.</p>
+                        <p>Resting and active heart-rate logging with historical trend insights.</p>
                     </div>
 
                     <div class="feature-card">
                         <div class="card-icon">🏆</div>
                         <h3>Achievements & Badges</h3>
-                        <p>Earn streak badges and celebrate daily wellness milestones.</p>
+                        <p>Earn milestone badges and celebrate consistent daily health habits.</p>
                     </div>
 
                 </div>
             </section>
 
-            <!-- Project 15-Step Roadmap -->
+            <!-- Project Roadmap -->
             <section class="roadmap-section" id="roadmap">
-                <h2 class="section-title">Development Roadmap</h2>
+                <h2 class="section-title">Development Progress</h2>
                 <div class="roadmap-list">
-                    <div class="roadmap-item active">
-                        <span class="step-num">01</span>
+                    <div class="roadmap-item completed">
+                        <span class="step-num">&#10003;</span>
                         <div class="step-info">
                             <h4>STEP 1: Basic Flask Project Structure</h4>
-                            <p>Completed: Basic Flask server, routing, HTML5 templates, CSS design system, and static assets.</p>
+                            <p>Completed: Basic Flask server, routing, HTML5 templates, and CSS design system.</p>
                         </div>
-                        <span class="step-status">Active</span>
+                        <span class="step-status done">Done</span>
                     </div>
 
-                    <div class="roadmap-item">
-                        <span class="step-num">02</span>
+                    <div class="roadmap-item completed">
+                        <span class="step-num">&#10003;</span>
                         <div class="step-info">
                             <h4>STEP 2: SQLite Database Setup</h4>
-                            <p>Upcoming: Design and connect database schema for users, activity, water, sleep, weight, and goals.</p>
+                            <p>Completed: 8 relational tables (users, activity, water, sleep, weight, heart_rate, goals, achievements).</p>
                         </div>
-                        <span class="step-status upcoming">Next</span>
+                        <span class="step-status done">Done</span>
                     </div>
 
-                    <div class="roadmap-item">
+                    <div class="roadmap-item active">
                         <span class="step-num">03</span>
                         <div class="step-info">
                             <h4>STEP 3: User Register & Login</h4>
-                            <p>Upcoming: Secure password hashing, user session management, and access control.</p>
+                            <p>Active: Password hashing (Werkzeug), sessions, registration profile collection, and route protection.</p>
                         </div>
-                        <span class="step-status upcoming">Upcoming</span>
+                        <span class="step-status">Active</span>
                     </div>
                 </div>
             </section>
@@ -132,7 +157,7 @@ venv\Scripts\activate<!DOCTYPE html>
         </div>
     </footer>
 
-    <!-- Link to Custom JavaScript in static/js/main.js -->
+    <!-- Custom JavaScript -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

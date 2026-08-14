@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="HealthTrack AI Dashboard - User Overview">
+    <title>Dashboard - HealthTrack AI</title>
+    
+    <!-- Custom CSS Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <!-- Top Navigation Header -->
+    <header class="navbar">
+        <div class="container nav-content">
+            <a href="/" class="brand-logo" id="brand-logo">
+                <span class="brand-icon">⚡</span>
+                <span class="brand-text">HealthTrack <span class="ai-highlight">AI</span></span>
+            </a>
+            
+            <div class="nav-links">
+                <span class="nav-user-pill">👤 {{ user.full_name }}</span>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline btn-sm">Sign Out</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Flash Messages Container -->
+    <div class="container flash-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <span>{{ message }}</span>
+                        <button type="button" class="alert-close" onclick="this.parentElement.remove();">&times;</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content Container -->
+    <main class="main-content">
+        <div class="container">
+            
+            <!-- Dashboard Welcome Banner -->
+            <section class="dashboard-banner">
+                <div class="banner-content">
+                    <span class="badge">Session Active &bull; Step 3 Authenticated</span>
+                    <h1 class="banner-title">Welcome back, <span class="gradient-text">{{ user.full_name }}</span>!</h1>
+                    <p class="banner-subtitle">
+                        Your account is verified and securely connected via Flask Sessions &amp; SQLite.
+                    </p>
+                </div>
+                <div class="banner-actions">
+                    <a href="{{ url_for('logout') }}" class="btn btn-secondary">Log Out</a>
+                </div>
+            </section>
+
+            <!-- Biometric Profile Card Grid -->
+            <section class="profile-overview-section">
+                <h2 class="section-title text-left">Your Health Profile Summary</h2>
+                
+                <div class="metrics-grid">
+                    <!-- Metric 1: Age & Gender -->
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">👤</span>
+                            <span class="metric-label">Demographics</span>
+                        </div>
+                        <div class="metric-value">{{ user.age }} <span class="metric-unit">yrs</span></div>
+                        <div class="metric-footer">Gender: <strong>{{ user.gender | replace('_', ' ') | capitalize }}</strong></div>
+                    </div>
+
+                    <!-- Metric 2: Height -->
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">📏</span>
+                            <span class="metric-label">Height</span>
+                        </div>
+                        <div class="metric-value">{{ user.height_cm }} <span class="metric-unit">cm</span></div>
+                        <div class="metric-footer">Logged during registration</div>
+                    </div>
+
+                    <!-- Metric 3: Weight -->
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">⚖️</span>
+                            <span class="metric-label">Weight</span>
+                        </div>
+                        <div class="metric-value">{{ user.target_weight_kg }} <span class="metric-unit">kg</span></div>
+                        <div class="metric-footer">Recorded to weight history</div>
+                    </div>
+
+                    <!-- Metric 4: Calculated BMI -->
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">📊</span>
+                            <span class="metric-label">Calculated BMI</span>
+                        </div>
+                        <div class="metric-value">{{ bmi if bmi else 'N/A' }}</div>
+                        <div class="metric-footer">
+                            {% if bmi %}
+                                {% if bmi < 18.5 %}
+                                    <span class="badge-status-blue">Underweight</span>
+                                {% elif bmi < 25.0 %}
+                                    <span class="badge-status-green">Normal Weight</span>
+                                {% elif bmi < 30.0 %}
+                                    <span class="badge-status-yellow">Overweight</span>
+                                {% else %}
+                                    <span class="badge-status-red">Obese</span>
+                                {% endif %}
+                            {% else %}
+                                <span>Calculated from Height &amp; Weight</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Status Notice -->
+            <section class="step-notice-card">
+                <div class="notice-icon">🚀</div>
+                <div class="notice-body">
+                    <h3>Step 3 Authentication Complete!</h3>
+                    <p>
+                        Registration, Login, Password Hashing, Session Management, and Route Guarding are fully operational.
+                        Interactive dashboard tracking widgets (Step 4) will be implemented next.
+                    </p>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Global Footer -->
+    <footer class="footer">
+        <div class="container footer-content">
+            <p>&copy; 2026 HealthTrack AI &bull; Student IT Project</p>
+            <p class="disclaimer">
+                Disclaimer: HealthTrack AI is designed for personal wellness tracking and informational metrics.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
