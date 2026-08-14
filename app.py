@@ -1,17 +1,26 @@
 """
 HealthTrack AI - Main Flask Application
-Step 3: User Authentication (Register, Login, Logout, Sessions, Route Guarding)
+Step 4: Interactive User Dashboard with Real DB Metrics, Weekly Charts & Navigation
 """
 
 import os
 import functools
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from database import init_db
 from auth import (
     register_user,
     authenticate_user,
     validate_registration_data,
     get_user_by_id
+)
+from dashboard_service import (
+    get_user_dashboard_metrics,
+    ensure_user_has_initial_data,
+    log_user_activity,
+    log_user_water,
+    log_user_sleep,
+    log_user_weight,
+    log_user_heart_rate
 )
 
 # 1. Initialize Flask Application
@@ -54,7 +63,7 @@ def home():
     app_info = {
         "name": "HealthTrack AI",
         "tagline": "Your Modern Personal Health & Wellness Companion",
-        "version": "1.2.0 (Step 3 - Authentication Ready)"
+        "version": "1.3.0 (Step 4 - Dashboard & Analytics Ready)"
     }
     return render_template('index.html', info=app_info)
 
@@ -63,12 +72,7 @@ def home():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     """
-    Handles user registration:
-    - Collects: Full Name, Email, Password, Age, Gender, Height, Weight.
-    - Validates fields on backend.
-    - Hashes password.
-    - Creates database record.
-    - Automatically logs in and redirects to /dashboard.
+    Handles user registration with biometrics and redirects to /dashboard.
     """
     if "user_id" in session:
         return redirect(url_for("dashboard"))
@@ -109,7 +113,10 @@ def register():
             session["full_name"] = user["full_name"]
             session["email"] = user["email"]
 
-            flash(f"Welcome to HealthTrack AI, {user['full_name']}! Your account is ready.", "success")
+            # Initialize realistic tracking history for immediate chart visualization
+            ensure_user_has_initial_data(user["id"])
+
+            flash(f"Welcome to HealthTrack AI, {user['full_name']}! Your health profile is live.", "success")
             return redirect(url_for("dashboard"))
 
         except ValueError as err:
@@ -126,9 +133,7 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """
-    Handles user login:
-    - Authenticates credentials against password hash.
-    - Sets session and redirects to /dashboard (or requested 'next' URL).
+    Handles user login.
     """
     if "user_id" in session:
         return redirect(url_for("dashboard"))
@@ -144,16 +149,16 @@ def login():
 
         user = authenticate_user(identifier, password)
         if user:
-            # Establish session
             session.clear()
             session["user_id"] = user["id"]
             session["username"] = user["username"]
             session["full_name"] = user["full_name"]
             session["email"] = user["email"]
 
+            ensure_user_has_initial_data(user["id"])
+
             flash(f"Welcome back, {user['full_name']}!", "success")
             
-            # Redirect to next URL or dashboard
             if next_url and next_url.startswith('/'):
                 return redirect(next_url)
             return redirect(url_for("dashboard"))
@@ -175,28 +180,115 @@ def logout():
     return redirect(url_for("login"))
 
 
-# 8. User Dashboard Route (Protected)
+# 8. User Dashboard Route (Protected - Step 4)
 @app.route('/dashboard')
 @login_required
 def dashboard():
     """
-    Protected dashboard route.
-    Displays user profile summary and confirmation of Step 3 authentication.
+    Main HealthTrack AI Dashboard:
+    - Queries actual user database records.
+    - Today's Overview: Steps, Water, Sleep, Weight, Heart Rate.
+    - Progress Cards: Step goal, Water goal, Sleep goal.
+    - Weekly charts data: Steps, Water, Sleep past 7 days.
     """
     user_id = session.get("user_id")
-    user = get_user_by_id(user_id)
+    ensure_user_has_initial_data(user_id)
     
-    # Calculate BMI
-    bmi = None
-    if user and user.get("height_cm") and user.get("target_weight_kg"):
-        h_m = user["height_cm"] / 100.0
-        if h_m > 0:
-            bmi = round(user["target_weight_kg"] / (h_m * h_m), 1)
+    data = get_user_dashboard_metrics(user_id)
+    if not data:
+        flash("User profile could not be loaded. Please re-login.", "danger")
+        return redirect(url_for("logout"))
 
-    return render_template('dashboard.html', user=user, bmi=bmi)
+    return render_template('dashboard.html', **data)
 
 
-# 9. Application Entry Point
+# 9. Quick Logging Routes for Interactive Dashboard Updates
+@app.route('/log/steps', methods=['POST'])
+@login_required
+def log_steps_route():
+    """
+    Quick log steps endpoint.
+    """
+    user_id = session.get("user_id")
+    steps = request.form.get("steps") or 1000
+    try:
+        log_user_activity(user_id, int(steps))
+        flash(f"Successfully logged {int(steps):,} steps!", "success")
+    except Exception as e:
+        flash("Failed to log steps. Please enter a valid number.", "danger")
+    return redirect(url_for("dashboard"))
+
+
+@app.route('/log/water', methods=['POST'])
+@login_required
+def log_water_route():
+    """
+    Quick log water endpoint.
+    """
+    user_id = session.get("user_id")
+    amount = request.form.get("amount_ml") or 250
+    beverage = request.form.get("beverage_type") or "Water"
+    try:
+        log_user_water(user_id, int(amount), beverage)
+        flash(f"Logged +{int(amount)} ml of {beverage}!", "success")
+    except Exception as e:
+        flash("Failed to log water intake.", "danger")
+    return redirect(url_for("dashboard"))
+
+
+@app.route('/log/sleep', methods=['POST'])
+@login_required
+def log_sleep_route():
+    """
+    Quick log sleep endpoint.
+    """
+    user_id = session.get("user_id")
+    hours = request.form.get("hours") or 8.0
+    quality = request.form.get("quality") or 85
+    try:
+        log_user_sleep(user_id, float(hours), int(quality))
+        flash(f"Logged {float(hours)} hrs of sleep (Quality: {int(quality)}%)!", "success")
+    except Exception as e:
+        flash("Failed to log sleep entry.", "danger")
+    return redirect(url_for("dashboard"))
+
+
+@app.route('/log/weight', methods=['POST'])
+@login_required
+def log_weight_route():
+    """
+    Quick log weight endpoint.
+    """
+    user_id = session.get("user_id")
+    weight = request.form.get("weight_kg")
+    try:
+        if weight:
+            log_user_weight(user_id, float(weight))
+            flash(f"Weight updated to {float(weight):.1f} kg!", "success")
+    except Exception as e:
+        flash("Failed to update weight.", "danger")
+    return redirect(url_for("dashboard"))
+
+
+@app.route('/log/heart-rate', methods=['POST'])
+@login_required
+def log_heart_rate_route():
+    """
+    Quick log heart rate endpoint.
+    """
+    user_id = session.get("user_id")
+    bpm = request.form.get("bpm")
+    context = request.form.get("context") or "resting"
+    try:
+        if bpm:
+            log_user_heart_rate(user_id, int(bpm), context)
+            flash(f"Heart rate {int(bpm)} BPM ({context}) recorded!", "success")
+    except Exception as e:
+        flash("Failed to record heart rate.", "danger")
+    return redirect(url_for("dashboard"))
+
+
+# 10. Application Entry Point
 if __name__ == '__main__':
     print("-------------------------------------------------------")
     print("[HealthTrack AI] Initializing SQLite database...")
