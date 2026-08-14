@@ -1,6 +1,6 @@
 /**
  * HealthTrack AI - Client-Side JavaScript
- * Step 7: Sleep Tracking Module, Cross-Midnight Live Duration Preview, Chart.js Integrations, and Modals
+ * Step 8: Weight Tracking & BMI Analytics Module, Chart.js Integrations, and Modals
  */
 
 /* =============================================================================
@@ -221,9 +221,6 @@ function switchSleepModalTab(tabName) {
     }
 }
 
-/**
- * Calculates live sleep duration handling cross-midnight periods.
- */
 function updateLiveDurationPreview() {
     const bedtimeInput = document.getElementById('inline-bedtime');
     const wakeInput = document.getElementById('inline-wake-time');
@@ -249,11 +246,9 @@ function updateLiveDurationPreview() {
     let crossesMidnight = false;
 
     if (wTotal <= bTotal) {
-        // Crosses midnight (e.g. 23:00 to 07:30 = (1440 - 1380) + 450 = 60 + 450 = 510 mins)
         diffMins = (1440 - bTotal) + wTotal;
         crossesMidnight = true;
     } else {
-        // Same-day nap or schedule
         diffMins = wTotal - bTotal;
     }
 
@@ -262,6 +257,58 @@ function updateLiveDurationPreview() {
     const midnightTag = crossesMidnight ? ' (Crosses midnight)' : ' (Same day)';
 
     previewEl.textContent = `${hours} hours ${mins > 0 ? mins + ' minutes' : '00 minutes'}${midnightTag}`;
+}
+
+
+/* =============================================================================
+   6. WEIGHT TRACKING MODAL CONTROLLER (STEP 8)
+   ============================================================================= */
+function openWeightModal(tabName = 'add') {
+    const modal = document.getElementById('weightActionModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    switchWeightModalTab(tabName);
+}
+
+function closeWeightModal() {
+    const modal = document.getElementById('weightActionModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function switchWeightModalTab(tabName) {
+    const tabFormMap = {
+        'add': 'form-log-weight-modal',
+        'height': 'form-height-weight-modal',
+        'target': 'form-target-weight-modal'
+    };
+
+    const tabBtnMap = {
+        'add': 'weight-tab-add',
+        'height': 'weight-tab-height',
+        'target': 'weight-tab-target'
+    };
+
+    document.querySelectorAll('.weight-modal-pane').forEach(pane => {
+        pane.style.display = 'none';
+    });
+
+    document.querySelectorAll('#weightActionModal .modal-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    const targetFormId = tabFormMap[tabName] || 'form-log-weight-modal';
+    const targetForm = document.getElementById(targetFormId);
+    if (targetForm) {
+        targetForm.style.display = 'block';
+    }
+
+    const targetBtnId = tabBtnMap[tabName] || 'weight-tab-add';
+    const targetBtn = document.getElementById(targetBtnId);
+    if (targetBtn) {
+        targetBtn.classList.add('active');
+    }
 }
 
 
@@ -275,11 +322,13 @@ window.addEventListener('click', (e) => {
     if (waterModal && e.target === waterModal) closeWaterModal();
     const sleepModal = document.getElementById('sleepActionModal');
     if (sleepModal && e.target === sleepModal) closeSleepModal();
+    const weightModal = document.getElementById('weightActionModal');
+    if (weightModal && e.target === weightModal) closeWeightModal();
 });
 
 
 /* =============================================================================
-   6. STEP MODULE WEEKLY VS MONTHLY CHART.JS SWITCHER (STEP 5)
+   7. STEP MODULE WEEKLY VS MONTHLY CHART.JS SWITCHER (STEP 5)
    ============================================================================= */
 let stepTrendChartInstance = null;
 let stepPayloadData = null;
@@ -379,12 +428,11 @@ function showChartPeriod(period) {
 
 
 /* =============================================================================
-   7. DOM INITIALIZATION & CHART.JS MOUNTING
+   8. DOM INITIALIZATION & CHART.JS MOUNTING
    ============================================================================= */
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("⚡ HealthTrack AI (Modules & Visualizations) active.");
+    console.log("⚡ HealthTrack AI active.");
 
-    // Initialize live sleep preview if on sleep page
     updateLiveDurationPreview();
 
     // Auto-dismiss Alerts
@@ -408,7 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
         drawBorder: false
     };
 
-    // 1. Initialize Step Module Specific Chart (Step 5)
+    // 1. Step Module Specific Chart (Step 5)
     const stepPayloadEl = document.getElementById('step-chart-payload');
     if (stepPayloadEl) {
         try {
@@ -419,7 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 2. Initialize Water Module Specific Chart (Step 6)
+    // 2. Water Module Specific Chart (Step 6)
     const waterPayloadEl = document.getElementById('water-chart-payload');
     const waterTrendCanvas = document.getElementById('waterTrendChart');
     if (waterPayloadEl && waterTrendCanvas) {
@@ -478,7 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 3. Initialize Sleep Module Specific Chart (Step 7)
+    // 3. Sleep Module Specific Chart (Step 7)
     const sleepPayloadEl = document.getElementById('sleep-chart-payload');
     const sleepTrendCanvas = document.getElementById('sleepTrendChart');
     if (sleepPayloadEl && sleepTrendCanvas) {
@@ -537,7 +585,70 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 4. Initialize General Dashboard Charts
+    // 4. Weight Module Specific Chart (Step 8)
+    const weightPayloadEl = document.getElementById('weight-chart-payload');
+    const weightTrendCanvas = document.getElementById('weightTrendChart');
+    if (weightPayloadEl && weightTrendCanvas) {
+        try {
+            const weightPayload = JSON.parse(weightPayloadEl.textContent);
+            const ctx = weightTrendCanvas.getContext('2d');
+            const amberGradient = ctx.createLinearGradient(0, 0, 0, 300);
+            amberGradient.addColorStop(0, 'rgba(245, 158, 11, 0.4)');
+            amberGradient.addColorStop(1, 'rgba(245, 158, 11, 0.02)');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: weightPayload.labels.length ? weightPayload.labels : ['Initial'],
+                    datasets: [{
+                        label: 'Body Weight (kg)',
+                        data: weightPayload.weights.length ? weightPayload.weights : [70],
+                        fill: true,
+                        backgroundColor: amberGradient,
+                        borderColor: '#f59e0b',
+                        borderWidth: 3,
+                        tension: 0.3,
+                        pointBackgroundColor: '#fbbf24',
+                        pointBorderColor: '#111827',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#111827',
+                            titleColor: '#f9fafb',
+                            bodyColor: '#fbbf24',
+                            borderColor: 'rgba(245, 158, 11, 0.3)',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                label: (ctx) => `Weight: ${ctx.parsed.y} kg`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            grid: commonGridOptions,
+                            suggestedMin: Math.min(...(weightPayload.weights.length ? weightPayload.weights : [60])) - 3,
+                            suggestedMax: Math.max(...(weightPayload.weights.length ? weightPayload.weights : [80])) + 3,
+                            ticks: { callback: (v) => v + ' kg' }
+                        }
+                    }
+                }
+            });
+        } catch (err) {
+            console.error("Failed to parse Weight Chart Payload:", err);
+        }
+    }
+
+    // 5. Initialize General Dashboard Charts
     const chartDataEl = document.getElementById('chart-data');
     if (chartDataEl) {
         let chartData = null;

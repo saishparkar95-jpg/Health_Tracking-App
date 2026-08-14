@@ -1,6 +1,6 @@
 """
 HealthTrack AI - Main Flask Application
-Step 7: Sleep Tracking Module (Bedtime, Wake-up, Automatic Duration, Goals & Weekly Charts)
+Step 8: Weight Tracking & BMI Analytics Module
 """
 
 import os
@@ -16,7 +16,6 @@ from auth import (
 from dashboard_service import (
     get_user_dashboard_metrics,
     ensure_user_has_initial_data,
-    log_user_weight,
     log_user_heart_rate
 )
 from step_service import (
@@ -37,6 +36,13 @@ from sleep_service import (
     add_sleep_record,
     set_user_sleep_goal,
     delete_user_sleep_record
+)
+from weight_service import (
+    get_weight_module_data,
+    add_weight_record,
+    update_user_height,
+    set_user_target_weight,
+    delete_user_weight_record
 )
 
 # 1. Initialize Flask Application
@@ -79,7 +85,7 @@ def home():
     app_info = {
         "name": "HealthTrack AI",
         "tagline": "Your Modern Personal Health & Wellness Companion",
-        "version": "1.6.0 (Step 7 - Sleep Tracking Ready)"
+        "version": "1.7.0 (Step 8 - Weight & BMI Tracking Ready)"
     }
     return render_template('index.html', info=app_info)
 
@@ -369,14 +375,6 @@ def delete_water_log_route(log_id):
 @app.route('/sleep')
 @login_required
 def sleep_page():
-    """
-    Dedicated Sleep Tracking Module page:
-    - Today's / Latest Sleep stats & progress against daily goal
-    - Bedtime & Wake-up Time logging with automatic cross-midnight duration
-    - Deep, REM, and Light sleep stages calculation
-    - Weekly (7-day) Chart.js sleep trends
-    - Sleep History Log with single record deletion
-    """
     user_id = session.get("user_id")
     ensure_user_has_initial_data(user_id)
     sleep_data = get_sleep_module_data(user_id)
@@ -387,12 +385,6 @@ def sleep_page():
 @app.route('/log/sleep', methods=['POST'], endpoint='log_sleep_route')
 @login_required
 def add_sleep_route():
-    """
-    Logs a sleep session:
-    - Accepts Bedtime and Wake-up time (e.g. 23:00 to 07:30)
-    - Automatically calculates duration handling cross-midnight periods
-    - Also supports direct hour entry if provided
-    """
     user_id = session.get("user_id")
     bedtime = request.form.get("bedtime")
     wake_time = request.form.get("wake_time")
@@ -405,9 +397,7 @@ def add_sleep_route():
     try:
         if not bedtime or not wake_time:
             if hours_direct:
-                # Direct hour logging fallback
                 h_val = float(hours_direct)
-                # Assume standard 23:00 to wake-up calculation
                 bedtime = "23:00"
                 wake_mins = int((23 * 60 + h_val * 60) % 1440)
                 wake_time = f"{wake_mins // 60:02d}:{wake_mins % 60:02d}"
@@ -436,9 +426,6 @@ def add_sleep_route():
 @app.route('/sleep/goal', methods=['POST'])
 @login_required
 def set_sleep_goal_route():
-    """
-    Updates the user's daily sleep target in hours.
-    """
     user_id = session.get("user_id")
     new_goal = request.form.get("daily_sleep_goal_hours")
     redirect_target = request.form.get("redirect") or url_for("sleep_page")
@@ -457,9 +444,6 @@ def set_sleep_goal_route():
 @app.route('/sleep/delete/<int:record_id>', methods=['POST'])
 @login_required
 def delete_sleep_record_route(record_id):
-    """
-    Deletes a sleep entry.
-    """
     user_id = session.get("user_id")
     success = delete_user_sleep_record(user_id, record_id)
     if success:
@@ -469,21 +453,109 @@ def delete_sleep_record_route(record_id):
     return redirect(url_for("sleep_page"))
 
 
-# 12. Quick Logging Endpoints for Weight & Heart Rate
-@app.route('/log/weight', methods=['POST'])
+# =============================================================================
+# 12. WEIGHT TRACKING & BMI ANALYTICS MODULE ROUTES (STEP 8)
+# =============================================================================
+
+@app.route('/weight')
 @login_required
-def log_weight_route():
+def weight_page():
+    """
+    Dedicated Weight Tracking & BMI Analytics page:
+    - Weight logger & date saving
+    - Current BMI calculation with user height
+    - Informational BMI categories & healthy weight reference ranges
+    - Weight progression Chart.js chart
+    - Weight history log with single record deletion
+    """
+    user_id = session.get("user_id")
+    ensure_user_has_initial_data(user_id)
+    weight_data = get_weight_module_data(user_id)
+    return render_template('weight.html', **weight_data)
+
+
+@app.route('/weight/add', methods=['POST'], endpoint='add_weight_route')
+@app.route('/log/weight', methods=['POST'], endpoint='log_weight_route')
+@login_required
+def add_weight_route():
+    """
+    Logs a new weight measurement.
+    """
     user_id = session.get("user_id")
     weight = request.form.get("weight_kg")
+    record_date = request.form.get("date") or None
+    notes = request.form.get("notes") or None
+    redirect_target = request.form.get("redirect") or request.referrer or url_for("weight_page")
+
     try:
-        if weight:
-            log_user_weight(user_id, float(weight))
-            flash(f"Weight updated to {float(weight):.1f} kg!", "success")
+        w_val, bmi_val = add_weight_record(user_id, weight, record_date=record_date, notes=notes)
+        flash(f"Logged weight: {w_val:.1f} kg (BMI: {bmi_val}) successfully!", "success")
+    except ValueError as err:
+        flash(str(err), "danger")
     except Exception as e:
-        flash("Failed to update weight.", "danger")
-    return redirect(request.referrer or url_for("dashboard"))
+        flash("An error occurred while logging weight.", "danger")
+
+    return redirect(redirect_target)
 
 
+@app.route('/weight/height', methods=['POST'])
+@login_required
+def update_height_route():
+    """
+    Updates the user's height in profile settings and updates BMI.
+    """
+    user_id = session.get("user_id")
+    height = request.form.get("height_cm")
+    redirect_target = request.form.get("redirect") or url_for("weight_page")
+
+    try:
+        h_val = update_user_height(user_id, height)
+        flash(f"Profile height updated to {h_val:.1f} cm! BMI values recalculated.", "success")
+    except ValueError as err:
+        flash(str(err), "danger")
+    except Exception as e:
+        flash("Failed to update profile height.", "danger")
+
+    return redirect(redirect_target)
+
+
+@app.route('/weight/target', methods=['POST'])
+@login_required
+def set_target_weight_route():
+    """
+    Updates the user's target body weight goal.
+    """
+    user_id = session.get("user_id")
+    target_weight = request.form.get("target_weight_kg")
+    redirect_target = request.form.get("redirect") or url_for("weight_page")
+
+    try:
+        saved_target = set_user_target_weight(user_id, target_weight)
+        flash(f"Target body weight updated to {saved_target:.1f} kg!", "success")
+    except ValueError as err:
+        flash(str(err), "danger")
+    except Exception as e:
+        flash("Failed to update target weight.", "danger")
+
+    return redirect(redirect_target)
+
+
+@app.route('/weight/delete/<int:record_id>', methods=['POST'])
+@login_required
+def delete_weight_record_route(record_id):
+    """
+    Deletes a weight log.
+    """
+    user_id = session.get("user_id")
+    success = delete_user_weight_record(user_id, record_id)
+    if success:
+        flash("Weight entry deleted successfully.", "info")
+    else:
+        flash("Weight record could not be found or unauthorized.", "danger")
+    return redirect(url_for("weight_page"))
+
+
+# 13. Quick Logging Endpoint for Heart Rate
 @app.route('/log/heart-rate', methods=['POST'])
 @login_required
 def log_heart_rate_route():
@@ -499,7 +571,7 @@ def log_heart_rate_route():
     return redirect(request.referrer or url_for("dashboard"))
 
 
-# 13. Application Entry Point
+# 14. Application Entry Point
 if __name__ == '__main__':
     print("-------------------------------------------------------")
     print("[HealthTrack AI] Initializing SQLite database...")
