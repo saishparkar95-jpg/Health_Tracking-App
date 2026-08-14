@@ -1,6 +1,6 @@
 """
 HealthTrack AI - Main Flask Application
-Step 8: Weight Tracking & BMI Analytics Module
+Step 9: Heart Rate Tracking, Goals Dashboard & Dynamic Achievements
 """
 
 import os
@@ -15,8 +15,7 @@ from auth import (
 )
 from dashboard_service import (
     get_user_dashboard_metrics,
-    ensure_user_has_initial_data,
-    log_user_heart_rate
+    ensure_user_has_initial_data
 )
 from step_service import (
     get_step_module_data,
@@ -43,6 +42,15 @@ from weight_service import (
     update_user_height,
     set_user_target_weight,
     delete_user_weight_record
+)
+from heart_service import (
+    get_heart_module_data,
+    add_heart_rate_record,
+    delete_heart_rate_record
+)
+from goals_service import (
+    get_goals_and_achievements_data,
+    update_all_user_goals
 )
 
 # 1. Initialize Flask Application
@@ -85,7 +93,7 @@ def home():
     app_info = {
         "name": "HealthTrack AI",
         "tagline": "Your Modern Personal Health & Wellness Companion",
-        "version": "1.7.0 (Step 8 - Weight & BMI Tracking Ready)"
+        "version": "1.8.0 (Step 9 - Cardio & Goals Ready)"
     }
     return render_template('index.html', info=app_info)
 
@@ -454,20 +462,12 @@ def delete_sleep_record_route(record_id):
 
 
 # =============================================================================
-# 12. WEIGHT TRACKING & BMI ANALYTICS MODULE ROUTES (STEP 8)
+# 12. WEIGHT TRACKING & BMI MODULE ROUTES (STEP 8)
 # =============================================================================
 
 @app.route('/weight')
 @login_required
 def weight_page():
-    """
-    Dedicated Weight Tracking & BMI Analytics page:
-    - Weight logger & date saving
-    - Current BMI calculation with user height
-    - Informational BMI categories & healthy weight reference ranges
-    - Weight progression Chart.js chart
-    - Weight history log with single record deletion
-    """
     user_id = session.get("user_id")
     ensure_user_has_initial_data(user_id)
     weight_data = get_weight_module_data(user_id)
@@ -478,9 +478,6 @@ def weight_page():
 @app.route('/log/weight', methods=['POST'], endpoint='log_weight_route')
 @login_required
 def add_weight_route():
-    """
-    Logs a new weight measurement.
-    """
     user_id = session.get("user_id")
     weight = request.form.get("weight_kg")
     record_date = request.form.get("date") or None
@@ -501,9 +498,6 @@ def add_weight_route():
 @app.route('/weight/height', methods=['POST'])
 @login_required
 def update_height_route():
-    """
-    Updates the user's height in profile settings and updates BMI.
-    """
     user_id = session.get("user_id")
     height = request.form.get("height_cm")
     redirect_target = request.form.get("redirect") or url_for("weight_page")
@@ -522,9 +516,6 @@ def update_height_route():
 @app.route('/weight/target', methods=['POST'])
 @login_required
 def set_target_weight_route():
-    """
-    Updates the user's target body weight goal.
-    """
     user_id = session.get("user_id")
     target_weight = request.form.get("target_weight_kg")
     redirect_target = request.form.get("redirect") or url_for("weight_page")
@@ -543,9 +534,6 @@ def set_target_weight_route():
 @app.route('/weight/delete/<int:record_id>', methods=['POST'])
 @login_required
 def delete_weight_record_route(record_id):
-    """
-    Deletes a weight log.
-    """
     user_id = session.get("user_id")
     success = delete_user_weight_record(user_id, record_id)
     if success:
@@ -555,23 +543,124 @@ def delete_weight_record_route(record_id):
     return redirect(url_for("weight_page"))
 
 
-# 13. Quick Logging Endpoint for Heart Rate
-@app.route('/log/heart-rate', methods=['POST'])
+# =============================================================================
+# 13. HEART RATE TRACKING MODULE ROUTES (STEP 9)
+# =============================================================================
+
+@app.route('/heart')
 @login_required
-def log_heart_rate_route():
+def heart_page():
+    """
+    Dedicated Heart Rate Tracking Module page:
+    - Latest BPM reading & Context (Resting, Post-Workout, etc.)
+    - Average, min, max recorded BPM statistics
+    - Heart rate trend line chart (Chart.js)
+    - Manual entry with date, time, context, and notes
+    - Medical disclaimer banner
+    """
+    user_id = session.get("user_id")
+    ensure_user_has_initial_data(user_id)
+    heart_data = get_heart_module_data(user_id)
+    return render_template('heart.html', **heart_data)
+
+
+@app.route('/heart/add', methods=['POST'], endpoint='add_heart_route')
+@app.route('/log/heart-rate', methods=['POST'], endpoint='log_heart_rate_route')
+@login_required
+def add_heart_route():
+    """
+    Records a manual heart rate measurement in BPM.
+    """
     user_id = session.get("user_id")
     bpm = request.form.get("bpm")
-    context = request.form.get("context") or "resting"
+    m_date = request.form.get("date") or None
+    m_time = request.form.get("time") or None
+    context = request.form.get("context") or "Resting"
+    notes = request.form.get("notes") or None
+    redirect_target = request.form.get("redirect") or request.referrer or url_for("heart_page")
+
     try:
-        if bpm:
-            log_user_heart_rate(user_id, int(bpm), context)
-            flash(f"Heart rate {int(bpm)} BPM ({context}) recorded!", "success")
+        saved_bpm = add_heart_rate_record(
+            user_id=user_id,
+            bpm=bpm,
+            measured_date=m_date,
+            measured_time=m_time,
+            context=context,
+            notes=notes
+        )
+        flash(f"Recorded heart rate: {saved_bpm} BPM ({context}) successfully!", "success")
+    except ValueError as err:
+        flash(str(err), "danger")
     except Exception as e:
-        flash("Failed to record heart rate.", "danger")
-    return redirect(request.referrer or url_for("dashboard"))
+        flash("An error occurred while saving heart rate reading.", "danger")
+
+    return redirect(redirect_target)
 
 
-# 14. Application Entry Point
+@app.route('/heart/delete/<int:record_id>', methods=['POST'])
+@login_required
+def delete_heart_route(record_id):
+    """
+    Deletes a heart rate log entry.
+    """
+    user_id = session.get("user_id")
+    success = delete_heart_rate_record(user_id, record_id)
+    if success:
+        flash("Heart rate measurement deleted successfully.", "info")
+    else:
+        flash("Record could not be found or unauthorized.", "danger")
+    return redirect(url_for("heart_page"))
+
+
+# =============================================================================
+# 14. GOALS DASHBOARD & ACHIEVEMENTS SYSTEM (STEP 9)
+# =============================================================================
+
+@app.route('/goals')
+@login_required
+def goals_page():
+    """
+    Dedicated Goals Dashboard & Achievements Gallery:
+    - Daily Step Goal, Daily Water Goal, Daily Sleep Goal, Target Weight
+    - Today's completion percentages & progress status bars
+    - Dynamic Achievement Badges (unlocked vs locked with progress indicators)
+    """
+    user_id = session.get("user_id")
+    ensure_user_has_initial_data(user_id)
+    goals_data = get_goals_and_achievements_data(user_id)
+    return render_template('goals.html', **goals_data)
+
+
+@app.route('/goals/update', methods=['POST'])
+@login_required
+def update_goals_route():
+    """
+    Updates all daily goals (Steps, Water, Sleep, Target Weight).
+    """
+    user_id = session.get("user_id")
+    step_goal = request.form.get("daily_step_goal")
+    water_goal = request.form.get("daily_water_goal_ml")
+    sleep_goal = request.form.get("daily_sleep_goal_hours")
+    target_weight = request.form.get("target_weight_kg")
+
+    try:
+        update_all_user_goals(
+            user_id=user_id,
+            step_goal=step_goal,
+            water_goal=water_goal,
+            sleep_goal=sleep_goal,
+            target_weight=target_weight
+        )
+        flash("All daily health goals have been updated successfully!", "success")
+    except ValueError as err:
+        flash(str(err), "danger")
+    except Exception as e:
+        flash("Failed to update health goals.", "danger")
+
+    return redirect(url_for("goals_page"))
+
+
+# 15. Application Entry Point
 if __name__ == '__main__':
     print("-------------------------------------------------------")
     print("[HealthTrack AI] Initializing SQLite database...")

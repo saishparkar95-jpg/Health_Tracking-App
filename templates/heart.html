@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="HealthTrack AI - Heart Rate Monitoring, BPM Trends, and Cardiology Habit Tracking">
+    <title>Heart Rate Tracking - HealthTrack AI</title>
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- Custom CSS Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="dashboard-body">
+
+    <!-- Desktop Sidebar Navigation -->
+    <aside class="sidebar" id="desktop-sidebar">
+        <div class="sidebar-header">
+            <a href="/" class="brand-logo">
+                <span class="brand-icon">⚡</span>
+                <span class="brand-text">HealthTrack <span class="ai-highlight">AI</span></span>
+            </a>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('dashboard') }}" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Dashboard</span>
+            </a>
+            <a href="{{ url_for('steps_page') }}" class="nav-item">
+                <span class="nav-icon">👟</span>
+                <span class="nav-label">Step Tracking</span>
+            </a>
+            <a href="{{ url_for('water_page') }}" class="nav-item">
+                <span class="nav-icon">💧</span>
+                <span class="nav-label">Water Tracking</span>
+            </a>
+            <a href="{{ url_for('sleep_page') }}" class="nav-item">
+                <span class="nav-icon">🌙</span>
+                <span class="nav-label">Sleep Rest</span>
+            </a>
+            <a href="{{ url_for('weight_page') }}" class="nav-item">
+                <span class="nav-icon">⚖️</span>
+                <span class="nav-label">Weight &amp; BMI</span>
+            </a>
+            <a href="{{ url_for('heart_page') }}" class="nav-item active">
+                <span class="nav-icon">❤️</span>
+                <span class="nav-label">Heart Rate</span>
+            </a>
+            <a href="{{ url_for('goals_page') }}" class="nav-item">
+                <span class="nav-icon">🎯</span>
+                <span class="nav-label">Goals &amp; Badges</span>
+            </a>
+            <button type="button" class="nav-item btn-sidebar-action" onclick="openHeartModal()">
+                <span class="nav-icon">➕</span>
+                <span class="nav-label">Log Heart Rate</span>
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-badge">
+                <div class="user-avatar">
+                    {{ current_user.full_name[:1].upper() if current_user.full_name else 'U' }}
+                </div>
+                <div class="user-meta">
+                    <span class="user-name">{{ current_user.full_name }}</span>
+                    <span class="user-handle">@{{ current_user.username }}</span>
+                </div>
+            </div>
+            <a href="{{ url_for('logout') }}" class="btn-logout" title="Sign Out">
+                <span>🚪</span> Sign Out
+            </a>
+        </div>
+    </aside>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+        <a href="{{ url_for('dashboard') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">📊</span>
+            <span class="mobile-nav-text">Home</span>
+        </a>
+        <a href="{{ url_for('steps_page') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">👟</span>
+            <span class="mobile-nav-text">Steps</span>
+        </a>
+        <button type="button" class="mobile-nav-item mobile-nav-btn" onclick="openHeartModal()">
+            <span class="mobile-nav-icon highlight">➕</span>
+            <span class="mobile-nav-text">Log</span>
+        </button>
+        <a href="{{ url_for('heart_page') }}" class="mobile-nav-item active">
+            <span class="mobile-nav-icon">❤️</span>
+            <span class="mobile-nav-text">Heart</span>
+        </a>
+        <a href="{{ url_for('goals_page') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">🎯</span>
+            <span class="mobile-nav-text">Goals</span>
+        </a>
+    </nav>
+
+    <!-- Main Content Wrapper -->
+    <div class="dashboard-main-wrapper">
+        
+        <!-- Topbar -->
+        <header class="dashboard-topbar">
+            <div class="topbar-left">
+                <h1 class="page-heading">❤️ Heart Rate Monitoring</h1>
+                <p class="date-badge">📅 {{ today_str }} &bull; Beats Per Minute (BPM) Habit Tracking</p>
+            </div>
+            <div class="topbar-right">
+                <span class="status-indicator">
+                    <span class="status-dot-pulse" style="background-color: var(--accent-rose); box-shadow: 0 0 8px var(--accent-rose);"></span>
+                    Average: {{ stats.avg_bpm }} BPM
+                </span>
+                <button type="button" class="btn btn-primary btn-sm" onclick="openHeartModal()">
+                    ➕ Log Reading
+                </button>
+            </div>
+        </header>
+
+        <!-- Flash Messages -->
+        <div class="dashboard-container flash-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span>{{ message }}</span>
+                            <button type="button" class="alert-close" onclick="this.parentElement.remove();">&times;</button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- Medical Disclaimer Banner -->
+            <div class="alert alert-warning" style="margin-bottom: 1.5rem;">
+                <span>⚠️ <strong>Medical Disclaimer:</strong> HealthTrack AI is designed for habit and wellness tracking. It does not diagnose medical conditions. Unusual or concerning heart rate readings should always be evaluated by a qualified healthcare professional.</span>
+            </div>
+        </div>
+
+        <main class="dashboard-content">
+            <div class="dashboard-container">
+
+                <!-- 1. HERO SECTION: LATEST READING & SUMMARY STATS -->
+                <section class="dash-section">
+                    <div class="heart-hero-grid">
+                        
+                        <!-- Card 1: Latest Reading with Heart Pulse -->
+                        <div class="heart-stat-card">
+                            <div class="stat-card-header">
+                                <span class="badge badge-rose">Latest Heart Rate</span>
+                                <span class="stat-date-tag">🕒 {{ latest.measured_at }}</span>
+                            </div>
+                            
+                            <div class="heart-pulse-row">
+                                <div class="heart-icon-pulse">❤️</div>
+                                <div>
+                                    <h2 class="heart-count-huge">
+                                        {{ latest.bpm }}
+                                        <span class="heart-unit">BPM</span>
+                                    </h2>
+                                    <div class="heart-context-row">
+                                        <span class="context-pill">🏷️ {{ latest.context }}</span>
+                                        <span class="rating-badge rating-{{ latest.rating_class }}">
+                                            {{ latest.rating }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn btn-secondary btn-sm" style="margin-top: 1.25rem;" onclick="openHeartModal()">
+                                ➕ Record New Reading
+                            </button>
+                        </div>
+
+                        <!-- Card 2: Cardio Stats Overview -->
+                        <div class="heart-stat-card">
+                            <div class="stat-card-header">
+                                <span class="badge badge-cyan">Recorded Statistics</span>
+                                <span class="stat-date-tag">{{ stats.total_readings }} Readings Logged</span>
+                            </div>
+
+                            <div class="derivative-metrics-row" style="margin-top: 0.5rem;">
+                                <div class="metric-mini-card">
+                                    <span class="mini-icon">💓</span>
+                                    <div>
+                                        <span class="mini-val">{{ stats.avg_bpm }} <small>BPM</small></span>
+                                        <span class="mini-label">Recorded Average</span>
+                                    </div>
+                                </div>
+
+                                <div class="metric-mini-card">
+                                    <span class="mini-icon">📉</span>
+                                    <div>
+                                        <span class="mini-val">{{ stats.min_bpm }} <small>BPM</small></span>
+                                        <span class="mini-label">Lowest Reading</span>
+                                    </div>
+                                </div>
+
+                                <div class="metric-mini-card">
+                                    <span class="mini-icon">📈</span>
+                                    <div>
+                                        <span class="mini-val">{{ stats.max_bpm }} <small>BPM</small></span>
+                                        <span class="mini-label">Highest Reading</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="resting-zone-info">
+                                <span>💡 <strong>Standard Adult Reference:</strong> 60 – 100 BPM at rest. Highly trained athletes may have resting rates of 40 – 60 BPM.</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+
+                <!-- 2. QUICK LOGGING FORM CARD -->
+                <section class="dash-section">
+                    <div class="section-header-row">
+                        <div>
+                            <h2 class="dash-section-title">Record Heart Rate Measurement</h2>
+                            <p class="dash-section-sub">Manually log your pulse in Beats Per Minute (BPM)</p>
+                        </div>
+                    </div>
+
+                    <div class="quick-log-card">
+                        <form action="{{ url_for('add_heart_route') }}" method="POST" id="inline-heart-form">
+                            <div class="form-grid form-grid-4">
+                                
+                                <div class="form-group">
+                                    <label for="inline-bpm-val" class="form-label">Heart Rate (BPM) <span class="req">*</span></label>
+                                    <input type="number" id="inline-bpm-val" name="bpm" class="form-input" min="30" max="240" placeholder="e.g. 72" value="72" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="inline-heart-context" class="form-label">Context / State</label>
+                                    <select id="inline-heart-context" name="context" class="form-input form-select">
+                                        <option value="Resting">Resting 🛋️</option>
+                                        <option value="Morning Awakening">Morning Awakening 🌅</option>
+                                        <option value="Walking / Light Activity">Walking 🚶</option>
+                                        <option value="Post-Workout">Post-Workout 🏃</option>
+                                        <option value="Evening Wind-Down">Evening Wind-Down 🌙</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="inline-heart-date" class="form-label">Date</label>
+                                    <input type="date" id="inline-heart-date" name="date" class="form-input" value="{{ today_str }}">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="inline-heart-time" class="form-label">Time</label>
+                                    <input type="time" id="inline-heart-time" name="time" class="form-input" value="{{ now_time_str }}">
+                                </div>
+
+                            </div>
+
+                            <div class="form-group" style="margin-top: 0.5rem;">
+                                <label for="inline-heart-notes" class="form-label">Notes (Optional)</label>
+                                <input type="text" id="inline-heart-notes" name="notes" class="form-input" placeholder="e.g. Measured with wrist pulse after 5 mins seated rest">
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top: 1rem;">
+                                Save Heart Rate Reading &rarr;
+                            </button>
+                        </form>
+                    </div>
+                </section>
+
+
+                <!-- 3. HEART RATE TREND CHART SECTION -->
+                <section class="dash-section" id="heart-charts-section">
+                    <div class="section-header-row">
+                        <div>
+                            <h2 class="dash-section-title">Heart Rate Progression Trends</h2>
+                            <p class="dash-section-sub">Recorded BPM measurements over time with resting zone reference</p>
+                        </div>
+                    </div>
+
+                    <!-- Chart Card Container -->
+                    <div class="chart-card chart-card-wide">
+                        <div class="chart-card-header">
+                            <div>
+                                <h3 class="chart-title">❤️ Recorded Heart Rate History (BPM)</h3>
+                                <p class="chart-sub">Track cardiovascular trends across different measurement contexts</p>
+                            </div>
+                        </div>
+                        <div class="chart-canvas-wrapper" style="height: 320px;">
+                            <canvas id="heartTrendChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- 4. RECENT READINGS HISTORY TABLE -->
+                <section class="dash-section">
+                    <div class="section-header-row">
+                        <div>
+                            <h2 class="dash-section-title">Recent Heart Rate Log</h2>
+                            <p class="dash-section-sub">Your recorded pulse entries stored in SQLite</p>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="openHeartModal()">
+                            ➕ Log Reading
+                        </button>
+                    </div>
+
+                    <div class="history-table-card">
+                        {% if history %}
+                            <div class="table-responsive">
+                                <table class="custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date &amp; Time</th>
+                                            <th>Heart Rate</th>
+                                            <th>Context</th>
+                                            <th class="text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for rec in history %}
+                                            <tr>
+                                                <td class="font-bold">
+                                                    📅 {{ rec.measured_at }}
+                                                </td>
+                                                <td class="font-bold text-rose">
+                                                    {{ rec.bpm }} BPM
+                                                </td>
+                                                <td>
+                                                    <span class="context-pill">
+                                                        {{ rec.display_context }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-right">
+                                                    <form action="{{ url_for('delete_heart_route', record_id=rec.id) }}" method="POST" class="inline-form" onsubmit="return confirm('Are you sure you want to delete this heart rate reading?');">
+                                                        <button type="submit" class="btn-delete-icon" title="Delete reading">🗑️</button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="empty-state">
+                                <span class="empty-icon">❤️</span>
+                                <h3>No heart rate readings logged yet</h3>
+                                <p>Record your first BPM reading to start tracking your cardiovascular habits!</p>
+                                <button type="button" class="btn btn-primary btn-sm" onclick="openHeartModal()">
+                                    Log First Reading &rarr;
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </section>
+
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container footer-content">
+                <p>&copy; 2026 HealthTrack AI &bull; Heart Rate Tracking &bull; Informational Wellness Habit Monitoring</p>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- =======================================================================
+         HEART RATE MODAL (Log Reading)
+         ======================================================================= -->
+    <div class="modal-overlay" id="heartActionModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">❤️ Log Heart Rate Reading</h3>
+                <button type="button" class="modal-close-btn" onclick="closeHeartModal()">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <form action="{{ url_for('add_heart_route') }}" method="POST" id="form-log-heart-modal">
+                    <p class="modal-desc">Enter pulse reading in Beats Per Minute (BPM):</p>
+                    
+                    <div class="form-group">
+                        <label for="modal-heart-bpm" class="form-label">Heart Rate (BPM) <span class="req">*</span></label>
+                        <input type="number" id="modal-heart-bpm" name="bpm" class="form-input" min="30" max="240" placeholder="e.g. 72" value="72" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="modal-heart-context" class="form-label">Context / State</label>
+                        <select id="modal-heart-context" name="context" class="form-input form-select">
+                            <option value="Resting">Resting 🛋️</option>
+                            <option value="Morning Awakening">Morning Awakening 🌅</option>
+                            <option value="Walking / Light Activity">Walking 🚶</option>
+                            <option value="Post-Workout">Post-Workout 🏃</option>
+                            <option value="Evening Wind-Down">Evening Wind-Down 🌙</option>
+                        </select>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="modal-heart-date" class="form-label">Date</label>
+                            <input type="date" id="modal-heart-date" name="date" class="form-input" value="{{ today_str }}">
+                        </div>
+                        <div class="form-group">
+                            <label for="modal-heart-time" class="form-label">Time</label>
+                            <input type="time" id="modal-heart-time" name="time" class="form-input" value="{{ now_time_str }}">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="modal-heart-notes" class="form-label">Notes (Optional)</label>
+                        <input type="text" id="modal-heart-notes" name="notes" class="form-input" placeholder="e.g. After 5 mins resting breathwork">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">Save Reading &rarr;</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Injection for Chart.js -->
+    <script id="heart-chart-payload" type="application/json">
+        {
+            "labels": {{ chart.labels | tojson }},
+            "bpms": {{ chart.bpms | tojson }}
+        }
+    </script>
+
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

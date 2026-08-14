@@ -1,6 +1,6 @@
 /**
  * HealthTrack AI - Client-Side JavaScript
- * Step 8: Weight Tracking & BMI Analytics Module, Chart.js Integrations, and Modals
+ * Step 9: Heart Rate Monitoring, Goals Dashboard & Dynamic Achievements
  */
 
 /* =============================================================================
@@ -312,6 +312,30 @@ function switchWeightModalTab(tabName) {
 }
 
 
+/* =============================================================================
+   7. HEART RATE & GOALS MODAL CONTROLLERS (STEP 9)
+   ============================================================================= */
+function openHeartModal() {
+    const modal = document.getElementById('heartActionModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeHeartModal() {
+    const modal = document.getElementById('heartActionModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function openGoalsModal() {
+    const modal = document.getElementById('goalsModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeGoalsModal() {
+    const modal = document.getElementById('goalsModal');
+    if (modal) modal.style.display = 'none';
+}
+
+
 // Window click-outside dismiss for all modals
 window.addEventListener('click', (e) => {
     const quickModal = document.getElementById('quickLogModal');
@@ -324,11 +348,15 @@ window.addEventListener('click', (e) => {
     if (sleepModal && e.target === sleepModal) closeSleepModal();
     const weightModal = document.getElementById('weightActionModal');
     if (weightModal && e.target === weightModal) closeWeightModal();
+    const heartModal = document.getElementById('heartActionModal');
+    if (heartModal && e.target === heartModal) closeHeartModal();
+    const goalsModal = document.getElementById('goalsModal');
+    if (goalsModal && e.target === goalsModal) closeGoalsModal();
 });
 
 
 /* =============================================================================
-   7. STEP MODULE WEEKLY VS MONTHLY CHART.JS SWITCHER (STEP 5)
+   8. STEP MODULE WEEKLY VS MONTHLY CHART.JS SWITCHER (STEP 5)
    ============================================================================= */
 let stepTrendChartInstance = null;
 let stepPayloadData = null;
@@ -428,7 +456,7 @@ function showChartPeriod(period) {
 
 
 /* =============================================================================
-   8. DOM INITIALIZATION & CHART.JS MOUNTING
+   9. DOM INITIALIZATION & CHART.JS MOUNTING
    ============================================================================= */
 document.addEventListener('DOMContentLoaded', () => {
     console.log("⚡ HealthTrack AI active.");
@@ -648,7 +676,70 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 5. Initialize General Dashboard Charts
+    // 5. Heart Rate Specific Chart (Step 9)
+    const heartPayloadEl = document.getElementById('heart-chart-payload');
+    const heartTrendCanvas = document.getElementById('heartTrendChart');
+    if (heartPayloadEl && heartTrendCanvas) {
+        try {
+            const heartPayload = JSON.parse(heartPayloadEl.textContent);
+            const ctx = heartTrendCanvas.getContext('2d');
+            const roseGradient = ctx.createLinearGradient(0, 0, 0, 300);
+            roseGradient.addColorStop(0, 'rgba(244, 63, 94, 0.45)');
+            roseGradient.addColorStop(1, 'rgba(244, 63, 94, 0.02)');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: heartPayload.labels.length ? heartPayload.labels : ['Resting'],
+                    datasets: [{
+                        label: 'Heart Rate (BPM)',
+                        data: heartPayload.bpms.length ? heartPayload.bpms : [72],
+                        fill: true,
+                        backgroundColor: roseGradient,
+                        borderColor: '#f43f5e',
+                        borderWidth: 3,
+                        tension: 0.35,
+                        pointBackgroundColor: '#fb7185',
+                        pointBorderColor: '#111827',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#111827',
+                            titleColor: '#f9fafb',
+                            bodyColor: '#fb7185',
+                            borderColor: 'rgba(244, 63, 94, 0.3)',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                label: (ctx) => `Pulse: ${ctx.parsed.y} BPM`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            grid: commonGridOptions,
+                            suggestedMin: 50,
+                            suggestedMax: 130,
+                            ticks: { callback: (v) => v + ' bpm' }
+                        }
+                    }
+                }
+            });
+        } catch (err) {
+            console.error("Failed to parse Heart Rate Chart Payload:", err);
+        }
+    }
+
+    // 6. Initialize General Dashboard Charts
     const chartDataEl = document.getElementById('chart-data');
     if (chartDataEl) {
         let chartData = null;
