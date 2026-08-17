@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Create your HealthTrack AI account - Start tracking your fitness and health metrics.">
+    <title>Create Account - HealthTrack AI</title>
+    
+    <!-- PWA & Mobile Capabilities -->
+    <link rel="manifest" href="{{ url_for('manifest') }}">
+    <meta name="theme-color" content="#10b981">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HealthTrack AI">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/icon-192.png') }}">
+    
+    <!-- Custom CSS Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="auth-body">
+
+    <!-- Top Navigation Header -->
+    <header class="navbar">
+        <div class="container nav-content">
+            <a href="/" class="brand-logo" id="brand-logo">
+                <span class="brand-icon">⚡</span>
+                <span class="brand-text">HealthTrack <span class="ai-highlight">AI</span></span>
+            </a>
+            <div class="nav-links">
+                <span class="text-secondary text-sm">Already registered?</span>
+                <a href="{{ url_for('login') }}" class="btn btn-secondary btn-sm">Sign In</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Auth Content -->
+    <main class="main-content auth-container">
+        <div class="container">
+            
+            <div class="auth-card">
+                <!-- Header -->
+                <div class="auth-header">
+                    <span class="badge">Join HealthTrack AI</span>
+                    <h1 class="auth-title">Create Your Account</h1>
+                    <p class="auth-subtitle">Set up your personal health profile to begin personalized tracking.</p>
+                </div>
+
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="flash-messages">
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">
+                                    <span>{{ message }}</span>
+                                    <button type="button" class="alert-close" onclick="this.parentElement.remove();">&times;</button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Client-Side Form Error Banner (Hidden by default) -->
+                <div id="client-error-banner" class="alert alert-danger" style="display: none;">
+                    <span id="client-error-text"></span>
+                </div>
+
+                <!-- Registration Form -->
+                <form action="{{ url_for('register') }}" method="POST" id="register-form" novalidate>
+                    
+                    <!-- Section: Account Information -->
+                    <div class="form-section-title">
+                        <span>1</span> Account Credentials
+                    </div>
+
+                    <div class="form-grid">
+                        <!-- Full Name -->
+                        <div class="form-group">
+                            <label for="full_name" class="form-label">Full Name <span class="req">*</span></label>
+                            <input 
+                                type="text" 
+                                id="full_name" 
+                                name="full_name" 
+                                class="form-input" 
+                                placeholder="e.g. Alex Rivera" 
+                                value="{{ form.get('full_name', '') }}"
+                                required 
+                                minlength="2"
+                                maxlength="60"
+                                autocomplete="name"
+                            >
+                            <span class="field-hint">Your preferred display name</span>
+                        </div>
+
+                        <!-- Email Address -->
+                        <div class="form-group">
+                            <label for="email" class="form-label">Email Address <span class="req">*</span></label>
+                            <input 
+                                type="email" 
+                                id="email" 
+                                name="email" 
+                                class="form-input" 
+                                placeholder="alex@example.com" 
+                                value="{{ form.get('email', '') }}"
+                                required 
+                                autocomplete="email"
+                            >
+                            <span class="field-hint">Used for sign in and notifications</span>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <!-- Password -->
+                        <div class="form-group">
+                            <label for="password" class="form-label">Password <span class="req">*</span></label>
+                            <div class="password-wrapper">
+                                <input 
+                                    type="password" 
+                                    id="password" 
+                                    name="password" 
+                                    class="form-input" 
+                                    placeholder="At least 6 characters" 
+                                    required 
+                                    minlength="6"
+                                    autocomplete="new-password"
+                                >
+                                <button type="button" class="btn-toggle-pw" onclick="togglePasswordVisibility('password', this)" title="Toggle visibility">👁️</button>
+                            </div>
+                            <span class="field-hint">Minimum 6 characters</span>
+                        </div>
+
+                        <!-- Confirm Password -->
+                        <div class="form-group">
+                            <label for="confirm_password" class="form-label">Confirm Password <span class="req">*</span></label>
+                            <div class="password-wrapper">
+                                <input 
+                                    type="password" 
+                                    id="confirm_password" 
+                                    name="confirm_password" 
+                                    class="form-input" 
+                                    placeholder="Re-type your password" 
+                                    required 
+                                    minlength="6"
+                                    autocomplete="new-password"
+                                >
+                                <button type="button" class="btn-toggle-pw" onclick="togglePasswordVisibility('confirm_password', this)" title="Toggle visibility">👁️</button>
+                            </div>
+                            <span class="field-hint" id="pw-match-hint">Must match password</span>
+                        </div>
+                    </div>
+
+                    <!-- Section: Biometrics & Health Profile -->
+                    <div class="form-section-title">
+                        <span>2</span> Health & Biometric Profile
+                    </div>
+
+                    <div class="form-grid form-grid-4">
+                        <!-- Age -->
+                        <div class="form-group">
+                            <label for="age" class="form-label">Age (years) <span class="req">*</span></label>
+                            <input 
+                                type="number" 
+                                id="age" 
+                                name="age" 
+                                class="form-input" 
+                                placeholder="25" 
+                                min="10" 
+                                max="120" 
+                                value="{{ form.get('age', '') }}"
+                                required
+                            >
+                            <span class="field-hint">10 - 120 yrs</span>
+                        </div>
+
+                        <!-- Gender -->
+                        <div class="form-group">
+                            <label for="gender" class="form-label">Gender <span class="req">*</span></label>
+                            <select id="gender" name="gender" class="form-input form-select" required>
+                                <option value="" disabled {% if not form.get('gender') %}selected{% endif %}>Select...</option>
+                                <option value="male" {% if form.get('gender') == 'male' %}selected{% endif %}>Male</option>
+                                <option value="female" {% if form.get('gender') == 'female' %}selected{% endif %}>Female</option>
+                                <option value="other" {% if form.get('gender') == 'other' %}selected{% endif %}>Other</option>
+                                <option value="prefer_not_to_say" {% if form.get('gender') == 'prefer_not_to_say' %}selected{% endif %}>Prefer not to say</option>
+                            </select>
+                            <span class="field-hint">For metrics</span>
+                        </div>
+
+                        <!-- Height -->
+                        <div class="form-group">
+                            <label for="height" class="form-label">Height (cm) <span class="req">*</span></label>
+                            <input 
+                                type="number" 
+                                id="height" 
+                                name="height" 
+                                step="0.1" 
+                                class="form-input" 
+                                placeholder="175.0" 
+                                min="50" 
+                                max="260" 
+                                value="{{ form.get('height', '') }}"
+                                required
+                            >
+                            <span class="field-hint">50 - 260 cm</span>
+                        </div>
+
+                        <!-- Weight -->
+                        <div class="form-group">
+                            <label for="weight" class="form-label">Weight (kg) <span class="req">*</span></label>
+                            <input 
+                                type="number" 
+                                id="weight" 
+                                name="weight" 
+                                step="0.1" 
+                                class="form-input" 
+                                placeholder="70.0" 
+                                min="20" 
+                                max="350" 
+                                value="{{ form.get('weight', '') }}"
+                                required
+                            >
+                            <span class="field-hint">20 - 350 kg</span>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-block btn-lg" id="btn-submit-register">
+                            Complete Registration &rarr;
+                        </button>
+                    </div>
+
+                    <!-- Footer Link -->
+                    <p class="auth-footer-text">
+                        Already have an account? <a href="{{ url_for('login') }}">Sign In here</a>
+                    </p>
+                </form>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Global Footer -->
+    <footer class="footer">
+        <div class="container footer-content">
+            <p>&copy; 2026 HealthTrack AI &bull; Student IT Project</p>
+        </div>
+    </footer>
+
+    <!-- PWA Install Banner Prompt -->
+    <div id="pwa-install-banner" class="pwa-install-banner">
+        <div class="pwa-banner-icon">📲</div>
+        <div class="pwa-banner-text">
+            <h4>Install HealthTrack AI</h4>
+            <p>Add to your home screen for offline access and instant tracking.</p>
+            <div class="pwa-banner-actions">
+                <button type="button" class="btn-pwa-install" onclick="promptPWAInstall()">Install</button>
+                <button type="button" class="btn-pwa-dismiss" onclick="dismissPWABanner()">Not Now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

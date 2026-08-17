@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="HealthTrack AI - Personalized AI Wellness Insights across steps, hydration, sleep, weight, and heart rate.">
+    <title>AI Wellness Insights - HealthTrack AI</title>
+    
+    <!-- PWA & Mobile Capabilities -->
+    <link rel="manifest" href="{{ url_for('manifest') }}">
+    <meta name="theme-color" content="#10b981">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HealthTrack AI">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/icon-192.png') }}">
+    
+    <!-- Custom CSS Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="dashboard-body">
+
+    <!-- Desktop Sidebar Navigation -->
+    <aside class="sidebar" id="desktop-sidebar">
+        <div class="sidebar-header">
+            <a href="/" class="brand-logo">
+                <span class="brand-icon">⚡</span>
+                <span class="brand-text">HealthTrack <span class="ai-highlight">AI</span></span>
+            </a>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('dashboard') }}" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Dashboard</span>
+            </a>
+            <a href="{{ url_for('steps_page') }}" class="nav-item">
+                <span class="nav-icon">👟</span>
+                <span class="nav-label">Step Tracking</span>
+            </a>
+            <a href="{{ url_for('water_page') }}" class="nav-item">
+                <span class="nav-icon">💧</span>
+                <span class="nav-label">Water Tracking</span>
+            </a>
+            <a href="{{ url_for('sleep_page') }}" class="nav-item">
+                <span class="nav-icon">🌙</span>
+                <span class="nav-label">Sleep Rest</span>
+            </a>
+            <a href="{{ url_for('weight_page') }}" class="nav-item">
+                <span class="nav-icon">⚖️</span>
+                <span class="nav-label">Weight &amp; BMI</span>
+            </a>
+            <a href="{{ url_for('heart_page') }}" class="nav-item">
+                <span class="nav-icon">❤️</span>
+                <span class="nav-label">Heart Rate</span>
+            </a>
+            <a href="{{ url_for('goals_page') }}" class="nav-item">
+                <span class="nav-icon">🎯</span>
+                <span class="nav-label">Goals &amp; Badges</span>
+            </a>
+            <a href="{{ url_for('insights_page') }}" class="nav-item active">
+                <span class="nav-icon">🧠</span>
+                <span class="nav-label">AI Insights</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-badge">
+                <div class="user-avatar">
+                    {{ user.full_name[:1].upper() if user.full_name else 'U' }}
+                </div>
+                <div class="user-meta">
+                    <span class="user-name">{{ user.full_name }}</span>
+                    <span class="user-handle">@{{ user.username }}</span>
+                </div>
+            </div>
+            <a href="{{ url_for('logout') }}" class="btn-logout" title="Sign Out">
+                <span>🚪</span> Sign Out
+            </a>
+        </div>
+    </aside>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+        <a href="{{ url_for('dashboard') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">📊</span>
+            <span class="mobile-nav-text">Home</span>
+        </a>
+        <a href="{{ url_for('steps_page') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">👟</span>
+            <span class="mobile-nav-text">Steps</span>
+        </a>
+        <a href="{{ url_for('water_page') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">💧</span>
+            <span class="mobile-nav-text">Water</span>
+        </a>
+        <a href="{{ url_for('goals_page') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">🎯</span>
+            <span class="mobile-nav-text">Goals</span>
+        </a>
+        <a href="{{ url_for('insights_page') }}" class="mobile-nav-item active">
+            <span class="mobile-nav-icon highlight">🧠</span>
+            <span class="mobile-nav-text">Insights</span>
+        </a>
+    </nav>
+
+    <!-- Main Content Wrapper -->
+    <div class="dashboard-main-wrapper">
+        
+        <!-- Topbar -->
+        <header class="dashboard-topbar">
+            <div class="topbar-left">
+                <h1 class="page-heading">🧠 AI Wellness Insights</h1>
+                <p class="date-badge">📅 {{ today_str }} &bull; Pattern Analysis across Steps, Hydration, Sleep, Weight &amp; Heart Rate</p>
+            </div>
+            <div class="topbar-right">
+                <a href="{{ url_for('goals_page') }}" class="btn btn-secondary btn-sm">
+                    🎯 View Goals
+                </a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-sm">
+                    📊 Dashboard Overview
+                </a>
+            </div>
+        </header>
+
+        <!-- Flash Messages -->
+        <div class="dashboard-container flash-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span>{{ message }}</span>
+                            <button type="button" class="alert-close" onclick="this.parentElement.remove();">&times;</button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <main class="dashboard-content">
+            <div class="dashboard-container">
+
+                <!-- 1. MEDICAL & SAFE NON-DIAGNOSTIC DISCLAIMER BANNER -->
+                <section class="dash-section">
+                    <div class="insights-disclaimer-card">
+                        <div class="disclaimer-icon-col">
+                            <span class="disclaimer-symbol">💡</span>
+                        </div>
+                        <div class="disclaimer-text-col">
+                            <h3 class="disclaimer-title">Wellness &amp; Habit Observations Notice</h3>
+                            <p class="disclaimer-body">
+                                HealthTrack AI provides automated lifestyle habit observations and progress summaries based on your logged activity, hydration, sleep, weight, and heart rate data. 
+                                These insights are intended for general wellness awareness and personal habit tracking only. 
+                                They do not constitute medical diagnoses, disease assessments, or clinical treatment recommendations. 
+                                If you observe concerning patterns or have health-related questions, please consult a qualified healthcare professional.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- 2. INSIGHTS SUMMARY HERO -->
+                <section class="dash-section">
+                    <div class="insights-hero-grid">
+                        <div class="insight-stat-box">
+                            <span class="insight-stat-icon">✨</span>
+                            <div class="insight-stat-number">{{ total_insights }}</div>
+                            <div class="insight-stat-label">Active Wellness Insights</div>
+                        </div>
+
+                        <div class="insight-stat-box">
+                            <span class="insight-stat-icon">🚀</span>
+                            <div class="insight-stat-number text-emerald">{{ positive_count }}</div>
+                            <div class="insight-stat-label">Positive Trends &amp; Milestones</div>
+                        </div>
+
+                        <div class="insight-stat-box">
+                            <span class="insight-stat-icon">💡</span>
+                            <div class="insight-stat-number text-cyan">{{ suggestion_count }}</div>
+                            <div class="insight-stat-label">Habit Opportunities</div>
+                        </div>
+
+                        <div class="insight-stat-box">
+                            <span class="insight-stat-icon">🔥</span>
+                            <div class="insight-stat-number text-amber">{{ metrics_summary.steps.streak }} Days</div>
+                            <div class="insight-stat-label">Active Activity Streak</div>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- 3. AI WELLNESS INSIGHTS GALLERY -->
+                <section class="dash-section">
+                    <div class="section-header-row">
+                        <div>
+                            <h2 class="dash-section-title">Personalized Wellness Observations</h2>
+                            <p class="dash-section-sub">Understandable summaries derived from your daily health records</p>
+                        </div>
+                        <span class="badge-cyan">🧠 AI Powered Analytics</span>
+                    </div>
+
+                    <!-- Category Filter Tabs -->
+                    <div class="achievement-filter-bar" style="margin-bottom: 1.5rem;">
+                        <button type="button" class="filter-pill active" onclick="filterInsightCards('all', this)">All Insights ({{ total_insights }})</button>
+                        <button type="button" class="filter-pill" onclick="filterInsightCards('steps', this)">👟 Steps &amp; Activity</button>
+                        <button type="button" class="filter-pill" onclick="filterInsightCards('water', this)">💧 Hydration</button>
+                        <button type="button" class="filter-pill" onclick="filterInsightCards('sleep', this)">🌙 Sleep &amp; Rest</button>
+                        <button type="button" class="filter-pill" onclick="filterInsightCards('weight', this)">⚖️ Weight Trends</button>
+                        <button type="button" class="filter-pill" onclick="filterInsightCards('heart_rate', this)">❤️ Heart Rate</button>
+                    </div>
+
+                    <div class="insights-grid" id="insightsGrid">
+                        {% for ins in insights %}
+                            <div class="insight-card type-{{ ins.type }}" data-category="{{ ins.category }}">
+                                <div class="insight-card-top">
+                                    <div class="insight-icon-frame">{{ ins.icon }}</div>
+                                    <div class="insight-title-group">
+                                        <h3 class="insight-card-title">{{ ins.title }}</h3>
+                                        <span class="insight-category-name">{{ ins.category | replace('_', ' ') | title }}</span>
+                                    </div>
+                                    <div class="insight-tag-pill tag-{{ ins.type }}">
+                                        {% if ins.type == 'positive' %}
+                                            <span>🚀 Positive Trend</span>
+                                        {% elif ins.type == 'suggestion' %}
+                                            <span>💡 Habit Tip</span>
+                                        {% elif ins.type == 'advisory' %}
+                                            <span>🩺 Health Advisory</span>
+                                        {% else %}
+                                            <span>📊 Observation</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="insight-card-body">
+                                    <p class="insight-text">{{ ins.text }}</p>
+                                </div>
+
+                                <div class="insight-card-footer">
+                                    <div class="insight-metric-tag">
+                                        <span class="metric-pill">{{ ins.metric_label }}</span>
+                                    </div>
+                                    
+                                    <div class="insight-action-link">
+                                        {% if ins.category == 'steps' %}
+                                            <a href="{{ url_for('steps_page') }}" class="btn-link-action">Step Tracker &rarr;</a>
+                                        {% elif ins.category == 'water' %}
+                                            <a href="{{ url_for('water_page') }}" class="btn-link-action">Hydration Log &rarr;</a>
+                                        {% elif ins.category == 'sleep' %}
+                                            <a href="{{ url_for('sleep_page') }}" class="btn-link-action">Sleep Log &rarr;</a>
+                                        {% elif ins.category == 'weight' %}
+                                            <a href="{{ url_for('weight_page') }}" class="btn-link-action">Weight &amp; BMI &rarr;</a>
+                                        {% elif ins.category == 'heart_rate' %}
+                                            <a href="{{ url_for('heart_page') }}" class="btn-link-action">Heart Rate &rarr;</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+
+                <!-- 4. MULTI-METRIC 7-DAY SUMMARY SNAPSHOT -->
+                <section class="dash-section">
+                    <div class="section-header-row">
+                        <div>
+                            <h2 class="dash-section-title">7-Day Recorded Health Metrics Snapshot</h2>
+                            <p class="dash-section-sub">A consolidated view of your averages across each tracked pillar</p>
+                        </div>
+                    </div>
+
+                    <div class="metric-summary-grid">
+                        
+                        <!-- Steps Card -->
+                        <div class="metric-summary-box border-emerald">
+                            <div class="metric-box-header">
+                                <span class="metric-box-icon">👟</span>
+                                <div>
+                                    <h4 class="metric-box-title">Daily Steps</h4>
+                                    <span class="metric-box-sub">Past 7 Days Average</span>
+                                </div>
+                            </div>
+                            <div class="metric-box-number text-emerald">
+                                {{ "{:,}".format(metrics_summary.steps.avg_daily) }} <span class="unit-sub">steps/day</span>
+                            </div>
+                            <div class="metric-box-detail">
+                                <span>Goal: <strong>{{ "{:,}".format(metrics_summary.steps.goal) }}</strong></span>
+                                <span>Met: <strong>{{ metrics_summary.steps.goal_met_days }}/7 days</strong></span>
+                            </div>
+                        </div>
+
+                        <!-- Water Card -->
+                        <div class="metric-summary-box border-cyan">
+                            <div class="metric-box-header">
+                                <span class="metric-box-icon">💧</span>
+                                <div>
+                                    <h4 class="metric-box-title">Hydration</h4>
+                                    <span class="metric-box-sub">Daily Intake Average</span>
+                                </div>
+                            </div>
+                            <div class="metric-box-number text-cyan">
+                                {{ "{:,}".format(metrics_summary.water.avg_daily_ml) }} <span class="unit-sub">ml/day</span>
+                            </div>
+                            <div class="metric-box-detail">
+                                <span>Goal: <strong>{{ "{:,}".format(metrics_summary.water.goal_ml) }} ml</strong></span>
+                                <span>Met: <strong>{{ metrics_summary.water.goal_met_days }}/7 days</strong></span>
+                            </div>
+                        </div>
+
+                        <!-- Sleep Card -->
+                        <div class="metric-summary-box border-purple">
+                            <div class="metric-box-header">
+                                <span class="metric-box-icon">🌙</span>
+                                <div>
+                                    <h4 class="metric-box-title">Sleep Rest</h4>
+                                    <span class="metric-box-sub">Nightly Duration Average</span>
+                                </div>
+                            </div>
+                            <div class="metric-box-number text-purple">
+                                {{ metrics_summary.sleep.avg_daily_hrs }} <span class="unit-sub">hrs/night</span>
+                            </div>
+                            <div class="metric-box-detail">
+                                <span>Target: <strong>{{ metrics_summary.sleep.goal_hrs }} hrs</strong></span>
+                                <span>Quality: <strong>{{ metrics_summary.sleep.avg_quality }}%</strong></span>
+                            </div>
+                        </div>
+
+                        <!-- Heart Rate Card -->
+                        <div class="metric-summary-box border-amber">
+                            <div class="metric-box-header">
+                                <span class="metric-box-icon">❤️</span>
+                                <div>
+                                    <h4 class="metric-box-title">Heart Rate</h4>
+                                    <span class="metric-box-sub">Latest Measurement</span>
+                                </div>
+                            </div>
+                            <div class="metric-box-number text-amber">
+                                {{ metrics_summary.heart_rate.latest_bpm or '--' }} <span class="unit-sub">BPM</span>
+                            </div>
+                            <div class="metric-box-detail">
+                                <span>Logged Readings: <strong>{{ metrics_summary.heart_rate.total_records }}</strong></span>
+                                <span>Context: <strong>Resting / Active</strong></span>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+
+                <!-- 5. GENERAL WELLNESS PRINCIPLES -->
+                <section class="dash-section">
+                    <div class="bmi-explanation-card">
+                        <div class="explanation-header">
+                            <span class="exp-icon">🌿</span>
+                            <div>
+                                <h3 class="exp-title">Foundational Wellness Guidelines</h3>
+                                <p class="exp-sub">Evidence-informed lifestyle habits to support daily energy and balance</p>
+                            </div>
+                        </div>
+
+                        <div class="explanation-grid">
+                            <div class="exp-box">
+                                <h4>👟 Daily Movement</h4>
+                                <p class="exp-text">Aiming for regular physical activity—like brisk walking—supports cardiovascular fitness and mental clarity throughout the day.</p>
+                            </div>
+
+                            <div class="exp-box">
+                                <h4>💧 Mindful Hydration</h4>
+                                <p class="exp-text">Consistent water intake throughout the day helps regulate body temperature, promotes joint lubrication, and combats fatigue.</p>
+                            </div>
+
+                            <div class="exp-box">
+                                <h4>🌙 Restful Sleep</h4>
+                                <p class="exp-text">Maintaining a consistent sleep and wake-up routine optimizes cellular recovery, focus, and emotional resilience.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container footer-content">
+                <p>&copy; 2026 HealthTrack AI &bull; AI Wellness Insights Module &bull; Non-Diagnostic Awareness Platform</p>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- PWA Install Banner Prompt -->
+    <div id="pwa-install-banner" class="pwa-install-banner">
+        <div class="pwa-banner-icon">📲</div>
+        <div class="pwa-banner-text">
+            <h4>Install HealthTrack AI</h4>
+            <p>Add to your home screen for offline access and instant tracking.</p>
+            <div class="pwa-banner-actions">
+                <button type="button" class="btn-pwa-install" onclick="promptPWAInstall()">Install</button>
+                <button type="button" class="btn-pwa-dismiss" onclick="dismissPWABanner()">Not Now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        function filterInsightCards(category, btn) {
+            document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            const cards = document.querySelectorAll('#insightsGrid .insight-card');
+            cards.forEach(card => {
+                const cardCat = card.getAttribute('data-category');
+                if (category === 'all' || cardCat === category) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

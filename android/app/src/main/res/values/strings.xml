@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">HealthTrack AI</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_activity">Activity</string>
+    <string name="nav_goals">Goals</string>
+    <string name="nav_profile">Profile</string>
+</resources>

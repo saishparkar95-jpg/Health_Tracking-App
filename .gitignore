@@ -26,8 +26,15 @@ instance/
 *.swp
 *.swo
 
-# OS files
-Thumbs.db
-Desktop.ini
-.DS_Store
+# Android Build & SDK files
+.gradle/
+android/.gradle/
+android/local.properties
+local.properties
+android/app/build/
+android/.idea/
+.artifacts/
+*.apk
+*.aab
+
 

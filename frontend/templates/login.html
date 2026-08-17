@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sign in to your HealthTrack AI account">
+    <title>Sign In - HealthTrack AI</title>
+    
+    <!-- PWA & Mobile Capabilities -->
+    <link rel="manifest" href="{{ url_for('manifest') }}">
+    <meta name="theme-color" content="#10b981">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HealthTrack AI">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/icon-192.png') }}">
+    
+    <!-- Custom CSS Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="auth-body">
+
+    <!-- Top Navigation Header -->
+    <header class="navbar">
+        <div class="container nav-content">
+            <a href="/" class="brand-logo" id="brand-logo">
+                <span class="brand-icon">⚡</span>
+                <span class="brand-text">HealthTrack <span class="ai-highlight">AI</span></span>
+            </a>
+            <div class="nav-links">
+                <span class="text-secondary text-sm">Don't have an account?</span>
+                <a href="{{ url_for('register') }}" class="btn btn-primary btn-sm">Get Started</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Auth Content -->
+    <main class="main-content auth-container">
+        <div class="container">
+            
+            <div class="auth-card auth-card-narrow">
+                <!-- Header -->
+                <div class="auth-header">
+                    <span class="badge">Welcome Back</span>
+                    <h1 class="auth-title">Sign In</h1>
+                    <p class="auth-subtitle">Access your personalized health dashboard and daily stats.</p>
+                </div>
+
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="flash-messages">
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">
+                                    <span>{{ message }}</span>
+                                    <button type="button" class="alert-close" onclick="this.parentElement.remove();">&times;</button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Client-Side Form Error Banner (Hidden by default) -->
+                <div id="login-error-banner" class="alert alert-danger" style="display: none;">
+                    <span id="login-error-text"></span>
+                </div>
+
+                <!-- Login Form -->
+                <form action="{{ url_for('login') }}" method="POST" id="login-form" novalidate>
+                    <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
+
+                    <!-- Email / Username -->
+                    <div class="form-group">
+                        <label for="identifier" class="form-label">Email or Username <span class="req">*</span></label>
+                        <input 
+                            type="text" 
+                            id="identifier" 
+                            name="identifier" 
+                            class="form-input" 
+                            placeholder="you@example.com or username" 
+                            value="{{ identifier }}"
+                            required 
+                            autocomplete="username"
+                        >
+                    </div>
+
+                    <!-- Password -->
+                    <div class="form-group">
+                        <div class="form-label-row">
+                            <label for="login_password" class="form-label">Password <span class="req">*</span></label>
+                        </div>
+                        <div class="password-wrapper">
+                            <input 
+                                type="password" 
+                                id="login_password" 
+                                name="password" 
+                                class="form-input" 
+                                placeholder="Enter your password" 
+                                required 
+                                autocomplete="current-password"
+                            >
+                            <button type="button" class="btn-toggle-pw" onclick="togglePasswordVisibility('login_password', this)" title="Toggle visibility">👁️</button>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-block btn-lg" id="btn-submit-login">
+                            Sign In to Dashboard &rarr;
+                        </button>
+                    </div>
+
+                    <!-- Footer Link -->
+                    <p class="auth-footer-text">
+                        New to HealthTrack AI? <a href="{{ url_for('register') }}">Create an account</a>
+                    </p>
+                </form>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Global Footer -->
+    <footer class="footer">
+        <div class="container footer-content">
+            <p>&copy; 2026 HealthTrack AI &bull; Student IT Project</p>
+        </div>
+    </footer>
+
+    <!-- PWA Install Banner Prompt -->
+    <div id="pwa-install-banner" class="pwa-install-banner">
+        <div class="pwa-banner-icon">📲</div>
+        <div class="pwa-banner-text">
+            <h4>Install HealthTrack AI</h4>
+            <p>Add to your home screen for offline access and instant tracking.</p>
+            <div class="pwa-banner-actions">
+                <button type="button" class="btn-pwa-install" onclick="promptPWAInstall()">Install</button>
+                <button type="button" class="btn-pwa-dismiss" onclick="dismissPWABanner()">Not Now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

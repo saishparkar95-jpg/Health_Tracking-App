@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="HealthTrack AI - Goals Dashboard, Daily Targets, Live Progress Tracking, and Milestone Achievements">
+    <title>Goals &amp; Achievements - HealthTrack AI</title>
+    
+    <!-- PWA & Mobile Capabilities -->
+    <link rel="manifest" href="{{ url_for('manifest') }}">
+    <meta name="theme-color" content="#10b981">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HealthTrack AI">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/icon-192.png') }}">
+    
+    <!-- Custom CSS Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="dashboard-body">
+
+    <!-- Desktop Sidebar Navigation -->
+    <aside class="sidebar" id="desktop-sidebar">
+        <div class="sidebar-header">
+            <a href="/" class="brand-logo">
+                <span class="brand-icon">⚡</span>
+                <span class="brand-text">HealthTrack <span class="ai-highlight">AI</span></span>
+            </a>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('dashboard') }}" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Dashboard</span>
+            </a>
+            <a href="{{ url_for('steps_page') }}" class="nav-item">
+                <span class="nav-icon">👟</span>
+                <span class="nav-label">Step Tracking</span>
+            </a>
+            <a href="{{ url_for('water_page') }}" class="nav-item">
+                <span class="nav-icon">💧</span>
+                <span class="nav-label">Water Tracking</span>
+            </a>
+            <a href="{{ url_for('sleep_page') }}" class="nav-item">
+                <span class="nav-icon">🌙</span>
+                <span class="nav-label">Sleep Rest</span>
+            </a>
+            <a href="{{ url_for('weight_page') }}" class="nav-item">
+                <span class="nav-icon">⚖️</span>
+                <span class="nav-label">Weight &amp; BMI</span>
+            </a>
+            <a href="{{ url_for('heart_page') }}" class="nav-item">
+                <span class="nav-icon">❤️</span>
+                <span class="nav-label">Heart Rate</span>
+            </a>
+            <a href="{{ url_for('goals_page') }}" class="nav-item active">
+                <span class="nav-icon">🎯</span>
+                <span class="nav-label">Goals &amp; Badges</span>
+            </a>
+            <a href="{{ url_for('insights_page') }}" class="nav-item">
+                <span class="nav-icon">🧠</span>
+                <span class="nav-label">AI Insights</span>
+            </a>
+            <button type="button" class="nav-item btn-sidebar-action" onclick="openGoalsModal()">
+                <span class="nav-icon">🎯</span>
+                <span class="nav-label">Customize Goals</span>
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-badge">
+                <div class="user-avatar">
+                    {{ current_user.full_name[:1].upper() if current_user.full_name else 'U' }}
+                </div>
+                <div class="user-meta">
+                    <span class="user-name">{{ current_user.full_name }}</span>
+                    <span class="user-handle">@{{ current_user.username }}</span>
+                </div>
+            </div>
+            <a href="{{ url_for('logout') }}" class="btn-logout" title="Sign Out">
+                <span>🚪</span> Sign Out
+            </a>
+        </div>
+    </aside>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+        <a href="{{ url_for('dashboard') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">📊</span>
+            <span class="mobile-nav-text">Home</span>
+        </a>
+        <a href="{{ url_for('steps_page') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">👟</span>
+            <span class="mobile-nav-text">Steps</span>
+        </a>
+        <a href="{{ url_for('water_page') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">💧</span>
+            <span class="mobile-nav-text">Water</span>
+        </a>
+        <a href="{{ url_for('goals_page') }}" class="mobile-nav-item active">
+            <span class="mobile-nav-icon highlight">🎯</span>
+            <span class="mobile-nav-text">Goals</span>
+        </a>
+        <a href="{{ url_for('logout') }}" class="mobile-nav-item">
+            <span class="mobile-nav-icon">🚪</span>
+            <span class="mobile-nav-text">Logout</span>
+        </a>
+    </nav>
+
+    <!-- Main Content Wrapper -->
+    <div class="dashboard-main-wrapper">
+        
+        <!-- Topbar -->
+        <header class="dashboard-topbar">
+            <div class="topbar-left">
+                <h1 class="page-heading">🎯 Goals &amp; Achievement Badges</h1>
+                <p class="date-badge">📅 {{ today_str }} &bull; Daily Objectives &bull; Real-Time Progress &bull; Milestone Badges</p>
+            </div>
+            <div class="topbar-right">
+                <span class="status-indicator">
+                    🏆 {{ unlocked_count }} of {{ total_achievements }} Badges Unlocked
+                </span>
+                <button type="button" class="btn btn-primary btn-sm" onclick="openGoalsModal()">
+                    ✏️ Set Daily Goals
+                </button>
+            </div>
+        </header>
+
+        <!-- Flash Messages -->
+        <div class="dashboard-container flash-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span>{{ message }}</span>
+                            <button type="button" class="alert-close" onclick="this.parentElement.remove();">&times;</button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <main class="dashboard-content">
+            <div class="dashboard-container">
+
+                <!-- 1. HERO SECTION: GOALS OVERVIEW -->
+                <section class="dash-section">
+                    <div class="goals-overview-card">
+                        <div class="overview-info">
+                            <span class="badge badge-emerald">Daily Objectives Status</span>
+                            <h2 class="overview-title">
+                                {{ summary.completed_goals }} of {{ summary.total_goals }} Goals Achieved Today
+                            </h2>
+                            <p class="overview-sub">
+                                {% if summary.overall_pct == 100 %}
+                                    🎉 Outstanding! You have met <strong>100%</strong> of your daily health targets today!
+                                {% else %}
+                                    You have completed <strong>{{ summary.overall_pct }}%</strong> of your daily health targets. Keep up the active momentum!
+                                {% endif %}
+                                &bull; <span class="text-amber">🔥 {{ summary.active_streak }}-Day Active Streak</span>
+                            </p>
+                        </div>
+
+                        <div class="overview-progress-bar-wrap">
+                            <div class="overall-progress-track">
+                                <div class="overall-progress-fill" style="width: {{ summary.overall_pct }}%;"></div>
+                            </div>
+                            <span class="overall-pct-label">{{ summary.overall_pct }}% Completed</span>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- 2. CURRENT GOALS & TODAY'S COMPLETION PROGRESS -->
+                <section class="dash-section">
+                    <div class="section-header-row">
+                        <div>
+                            <h2 class="dash-section-title">Active Health Goals &amp; Today's Progress</h2>
+                            <p class="dash-section-sub">Real-time status tracking against your personal targets</p>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="openGoalsModal()">
+                            ✏️ Edit Targets
+                        </button>
+                    </div>
+
+                    <div class="goals-grid">
+                        {% for g in goals %}
+                            <div class="goal-item-card border-{{ g.theme }}">
+                                <div class="goal-header">
+                                    <div class="goal-icon-badge bg-{{ g.theme }}">{{ g.icon }}</div>
+                                    <div>
+                                        <h3 class="goal-card-title">{{ g.title }}</h3>
+                                        <span class="goal-target-sub">Target: <strong>{{ g.target_display }}</strong></span>
+                                    </div>
+                                    <div class="goal-status-badge">
+                                        {% if g.is_completed %}
+                                            <span class="badge-status-completed">✓ Goal Met</span>
+                                        {% else %}
+                                            <span class="badge-status-progress">⏳ In Progress</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="goal-progress-section">
+                                    <div class="goal-progress-meta">
+                                        <span class="goal-current-val">Today: <strong>{{ g.current_display }}</strong></span>
+                                        <span class="goal-pct font-bold text-{{ g.theme }}">{{ g.pct }}%</span>
+                                    </div>
+                                    <div class="goal-progress-track">
+                                        <div class="goal-progress-fill fill-{{ g.theme }}" style="width: {{ g.pct }}%;"></div>
+                                    </div>
+                                    <div class="goal-remaining-sub">
+                                        <span>{{ g.remaining_display }}</span>
+                                        <span class="text-{{ g.theme }} font-bold">{{ g.status_text }}</span>
+                                    </div>
+                                </div>
+
+                                <div class="goal-card-actions">
+                                    {% if g.key == 'steps' %}
+                                        <form action="{{ url_for('add_steps_route') }}" method="POST" style="flex: 1; display: flex;">
+                                            <input type="hidden" name="steps" value="1000">
+                                            <input type="hidden" name="redirect" value="{{ url_for('goals_page') }}">
+                                            <button type="submit" class="btn-quick-goal btn-action-primary">+1,000 Steps</button>
+                                        </form>
+                                        <a href="{{ url_for('steps_page') }}" class="btn-quick-goal">View Steps &rarr;</a>
+                                    {% elif g.key == 'water' %}
+                                        <form action="{{ url_for('add_water_route') }}" method="POST" style="flex: 1; display: flex;">
+                                            <input type="hidden" name="amount_ml" value="250">
+                                            <input type="hidden" name="redirect" value="{{ url_for('goals_page') }}">
+                                            <button type="submit" class="btn-quick-goal btn-action-primary">+250 ml Glass</button>
+                                        </form>
+                                        <a href="{{ url_for('water_page') }}" class="btn-quick-goal">View Water &rarr;</a>
+                                    {% elif g.key == 'sleep' %}
+                                        <a href="{{ url_for('sleep_page') }}" class="btn-quick-goal btn-action-primary">Log Sleep &rarr;</a>
+                                        <a href="{{ url_for('sleep_page') }}" class="btn-quick-goal">View Sleep &rarr;</a>
+                                    {% elif g.key == 'weight' %}
+                                        <a href="{{ url_for('weight_page') }}" class="btn-quick-goal btn-action-primary">Log Weight &rarr;</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+
+                <!-- 3. INTERACTIVE GOALS SETTING & CUSTOMIZATION -->
+                <section class="dash-section">
+                    <div class="goals-config-card">
+                        <div class="section-header-row" style="margin-bottom: 1.25rem;">
+                            <div>
+                                <h2 class="dash-section-title">⚙️ Set &amp; Customize Your Daily Goals</h2>
+                                <p class="dash-section-sub">Adjust your daily step count, hydration volume, sleep duration, and target body weight</p>
+                            </div>
+                        </div>
+
+                        <form action="{{ url_for('update_goals_route') }}" method="POST" id="form-interactive-goals">
+                            <div class="goals-config-grid">
+                                
+                                <!-- Step Goal -->
+                                <div class="goal-config-field">
+                                    <div class="goal-field-label">
+                                        <span>👟 Daily Step Goal</span>
+                                        <span class="goal-value-badge" id="step-badge-val">{{ "{:,}".format(user_targets.step_goal) }} steps</span>
+                                    </div>
+                                    <input type="range" class="goal-range-slider" id="step-slider" min="2000" max="30000" step="500" value="{{ user_targets.step_goal }}" oninput="syncGoalValue('step', this.value)">
+                                    <input type="number" name="daily_step_goal" id="step-input-direct" class="form-input" min="1000" max="100000" value="{{ user_targets.step_goal }}" required oninput="syncGoalValue('step', this.value, true)">
+                                    <div class="goal-preset-row">
+                                        <button type="button" class="btn-preset-chip" onclick="setGoalPreset('step', 5000)">5,000</button>
+                                        <button type="button" class="btn-preset-chip" onclick="setGoalPreset('step', 8000)">8,000</button>
+                                        <button type="button" class="btn-preset-chip" onclick="setGoalPreset('step', 10000)">10,000</button>
+                                        <button type="button" class="btn-preset-chip" onclick="setGoalPreset('step', 12000)">12,000</button>
+                                        <button type="button" class="btn-preset-chip" onclick="setGoalPreset('step', 15000)">15,000</button>
+                                    </div>
+                                </div>
+
+                                <!-- Water Goal -->
+                                <div class="goal-config-field">
+                                    <div class="goal-field-label">
+                                        <span>💧 Daily Water Goal</span>
+                                        <span class="goal-value-badge" id="water-badge-val">{{ "{:,}".format(user_targets.water_goal) }} ml</span>
+                                    </div>
+                                    <input type="range" class="goal-range-slider" id="water-slider" min="1000" max="6000" step="250" value="{{ user_targets.water_goal }}" oninput="syncGoalValue('water', this.value)">
+                                    <input type="number" name="daily_water_goal_ml" id="water-input-direct" class="form-input" min="500" max="10000" value="{{ user_targets.water_goal }}" required oninput="syncGoalValue('water', this.value, true)">
+                                    <div class="goal-preset-row">
+                                        <button type="button" class="btn-preset-chip" onclick="setGoalPreset('water', 1500)">1,500 ml</button>
+                                        <button type="button" class="btn-preset-chip" onclick="setGoalPreset('water', 2000)">2,000 ml</button>
+                                        <button type="button" class="btn-preset-chip" onclick="setGoalPreset('water', 2500)">2,500 ml</button>
+                                        <button type="button" class="btn-preset-chip" onclick="setGoalPreset('water', 3000)">3,000 ml</button>
+                                        <button type="button" class="btn-preset-chip" onclick="setGoalPreset('water', 3500)">3,500 ml</button>
+                                    </div>
+                                </div>
+
+                                <!-- Sleep Goal -->
+                                <div class="goal-config-field">
+                                    <div class="goal-field-label">
+                                        <span>🌙 Sleep Rest Goal</span>
+                                        <span class="goal-value-badge" id="sleep-badge-val">{{ user_targets.sleep_goal }} hrs</span>
+                                    </div>
+                                    <input type="range" class="goal-range-slider" id="sleep-slider" min="4.0" max="12.0" step="0.5" value="{{ user_targets.sleep_goal }}" oninput="syncGoalValue('sleep', this.value)">
+                                    <input type="number" name="daily_sleep_goal_hours" id="sleep-input-direct" step="0.5" class="form-input" min="4" max="14" value="{{ user_targets.sleep_goal }}" required oninput="syncGoalValue('sleep', this.value, true)">
+                                    <div class="goal-preset-row">
+                                        <button type="button" class="btn-preset-chip" onclick="setGoalPreset('sleep', 7.0)">7.0 h</button>
+                                        <button type="button" class="btn-preset-chip" onclick="setGoalPreset('sleep', 7.5)">7.5 h</button>
+                                        <button type="button" class="btn-preset-chip" onclick="setGoalPreset('sleep', 8.0)">8.0 h</button>
+                                        <button type="button" class="btn-preset-chip" onclick="setGoalPreset('sleep', 8.5)">8.5 h</button>
+                                        <button type="button" class="btn-preset-chip" onclick="setGoalPreset('sleep', 9.0)">9.0 h</button>
+                                    </div>
+                                </div>
+
+                                <!-- Target Weight Goal -->
+                                <div class="goal-config-field">
+                                    <div class="goal-field-label">
+                                        <span>⚖️ Target Weight</span>
+                                        <span class="goal-value-badge" id="weight-badge-val">{{ user_targets.target_weight or '--' }} kg</span>
+                                    </div>
+                                    <input type="number" name="target_weight_kg" id="weight-input-direct" step="0.5" class="form-input" min="20" max="350" value="{{ user_targets.target_weight or '' }}" placeholder="e.g. 70.0 kg" oninput="document.getElementById('weight-badge-val').textContent = (this.value ? this.value + ' kg' : '-- kg')">
+                                    <p class="form-helper" style="margin-top: auto; font-size: 0.725rem; color: var(--text-muted);">Optional: Set your ideal body target weight for BMI progress calculations.</p>
+                                </div>
+
+                            </div>
+
+                            <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                                <button type="submit" class="btn btn-primary" style="padding: 0.75rem 2rem;">
+                                    💾 Save Health Targets &rarr;
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+
+                <!-- 4. ACHIEVEMENTS & MILESTONE BADGES GALLERY -->
+                <section class="dash-section">
+                    <div class="section-header-row">
+                        <div>
+                            <h2 class="dash-section-title">🏆 Achievements &amp; Milestone Badges</h2>
+                            <p class="dash-section-sub">Earn badges as you hit daily walking milestones, complete hydration &amp; sleep goals, and maintain streaks</p>
+                        </div>
+                        <span class="badge-amber">🏆 {{ unlocked_count }} of {{ total_achievements }} Badges Earned</span>
+                    </div>
+
+                    <!-- Category Filter Tabs -->
+                    <div class="achievement-filter-bar">
+                        <button type="button" class="filter-pill active" onclick="filterAchievements('all', this)">All Badges ({{ total_achievements }})</button>
+                        <button type="button" class="filter-pill" onclick="filterAchievements('fitness', this)">👟 Fitness &amp; Steps</button>
+                        <button type="button" class="filter-pill" onclick="filterAchievements('hydration', this)">💧 Hydration</button>
+                        <button type="button" class="filter-pill" onclick="filterAchievements('sleep', this)">🌙 Sleep Rest</button>
+                        <button type="button" class="filter-pill" onclick="filterAchievements('consistency', this)">🔥 Consistency</button>
+                        <button type="button" class="filter-pill" onclick="filterAchievements('milestone', this)">⭐ Milestones</button>
+                    </div>
+
+                    <div class="achievements-gallery-grid" id="achievementsGrid">
+                        {% for badge in achievements %}
+                            <div class="achievement-card {% if badge.is_unlocked %}unlocked{% else %}locked{% endif %}" data-category="{{ badge.category }}">
+                                <div class="achievement-icon-frame">
+                                    <span class="badge-main-icon">{{ badge.icon }}</span>
+                                    {% if badge.is_unlocked %}
+                                        <span class="unlock-star">✨</span>
+                                    {% else %}
+                                        <span class="lock-icon">🔒</span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="achievement-info">
+                                    <div class="achievement-title-row">
+                                        <h4 class="achievement-name">{{ badge.name }}</h4>
+                                        <span class="achievement-category-tag">{{ badge.category }}</span>
+                                    </div>
+                                    <p class="achievement-desc">{{ badge.description }}</p>
+                                    
+                                    {% if badge.is_unlocked %}
+                                        <span class="unlocked-date-tag">
+                                            🎉 Unlocked {{ badge.unlocked_at }}
+                                        </span>
+                                    {% else %}
+                                        <div class="badge-progress-box">
+                                            <div class="badge-progress-meta">
+                                                <span class="text-muted">Progress: {{ badge.progress_text }}</span>
+                                                <span class="text-amber font-bold">{{ badge.progress_pct }}%</span>
+                                            </div>
+                                            <div class="badge-progress-track">
+                                                <div class="badge-progress-fill" style="width: {{ badge.progress_pct }}%;"></div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container footer-content">
+                <p>&copy; 2026 HealthTrack AI &bull; Goals Dashboard &amp; Milestone Achievement System</p>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- =======================================================================
+         CUSTOMIZE GOALS MODAL DIALOG
+         ======================================================================= -->
+    <div class="modal-overlay" id="goalsModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">🎯 Customize Daily Goals</h3>
+                <button type="button" class="modal-close-btn" onclick="closeGoalsModal()">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <form action="{{ url_for('update_goals_route') }}" method="POST" id="form-update-goals">
+                    <p class="modal-desc">Configure your daily health objectives and targets:</p>
+                    
+                    <!-- Daily Step Goal -->
+                    <div class="form-group">
+                        <label for="goals-step-input" class="form-label">👟 Daily Step Goal (Steps)</label>
+                        <input type="number" id="goals-step-input" name="daily_step_goal" class="form-input" min="1000" max="100000" value="{{ user_targets.step_goal }}" required>
+                    </div>
+
+                    <!-- Daily Water Goal -->
+                    <div class="form-group">
+                        <label for="goals-water-input" class="form-label">💧 Daily Water Goal (ml)</label>
+                        <input type="number" id="goals-water-input" name="daily_water_goal_ml" class="form-input" min="500" max="10000" value="{{ user_targets.water_goal }}" required>
+                    </div>
+
+                    <!-- Daily Sleep Goal -->
+                    <div class="form-group">
+                        <label for="goals-sleep-input" class="form-label">🌙 Daily Sleep Goal (Hours)</label>
+                        <input type="number" id="goals-sleep-input" name="daily_sleep_goal_hours" step="0.5" class="form-input" min="4" max="14" value="{{ user_targets.sleep_goal }}" required>
+                    </div>
+
+                    <!-- Target Weight Goal -->
+                    <div class="form-group">
+                        <label for="goals-weight-input" class="form-label">⚖️ Target Body Weight (kg)</label>
+                        <input type="number" id="goals-weight-input" name="target_weight_kg" step="0.5" class="form-input" min="20" max="350" value="{{ user_targets.target_weight or '' }}" placeholder="e.g. 70.0">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">Save Health Goals &rarr;</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Goals interactive slider and input synchronization
+        function syncGoalValue(type, val, fromInput = false) {
+            val = parseFloat(val) || 0;
+            if (type === 'step') {
+                document.getElementById('step-badge-val').textContent = Number(val).toLocaleString() + ' steps';
+                if (fromInput) {
+                    const slider = document.getElementById('step-slider');
+                    if (slider) slider.value = Math.min(30000, Math.max(2000, val));
+                } else {
+                    const input = document.getElementById('step-input-direct');
+                    if (input) input.value = val;
+                }
+            } else if (type === 'water') {
+                document.getElementById('water-badge-val').textContent = Number(val).toLocaleString() + ' ml';
+                if (fromInput) {
+                    const slider = document.getElementById('water-slider');
+                    if (slider) slider.value = Math.min(6000, Math.max(1000, val));
+                } else {
+                    const input = document.getElementById('water-input-direct');
+                    if (input) input.value = val;
+                }
+            } else if (type === 'sleep') {
+                document.getElementById('sleep-badge-val').textContent = val.toFixed(1) + ' hrs';
+                if (fromInput) {
+                    const slider = document.getElementById('sleep-slider');
+                    if (slider) slider.value = Math.min(12, Math.max(4, val));
+                } else {
+                    const input = document.getElementById('sleep-input-direct');
+                    if (input) input.value = val;
+                }
+            }
+        }
+
+        function setGoalPreset(type, val) {
+            syncGoalValue(type, val);
+            if (type === 'step') {
+                document.getElementById('step-slider').value = val;
+                document.getElementById('step-input-direct').value = val;
+            } else if (type === 'water') {
+                document.getElementById('water-slider').value = val;
+                document.getElementById('water-input-direct').value = val;
+            } else if (type === 'sleep') {
+                document.getElementById('sleep-slider').value = val;
+                document.getElementById('sleep-input-direct').value = val;
+            }
+        }
+
+        // Achievements category filter
+        function filterAchievements(category, btn) {
+            document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            const cards = document.querySelectorAll('#achievementsGrid .achievement-card');
+            cards.forEach(card => {
+                const cardCat = card.getAttribute('data-category');
+                if (category === 'all' || cardCat === category) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+    </script>
+    <!-- PWA Install Banner Prompt -->
+    <div id="pwa-install-banner" class="pwa-install-banner">
+        <div class="pwa-banner-icon">📲</div>
+        <div class="pwa-banner-text">
+            <h4>Install HealthTrack AI</h4>
+            <p>Add to your home screen for offline access and instant tracking.</p>
+            <div class="pwa-banner-actions">
+                <button type="button" class="btn-pwa-install" onclick="promptPWAInstall()">Install</button>
+                <button type="button" class="btn-pwa-dismiss" onclick="dismissPWABanner()">Not Now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
