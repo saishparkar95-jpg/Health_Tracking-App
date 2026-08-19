@@ -3,22 +3,30 @@ package com.healthtrackai.app.ui.navigation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Cable
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timeline
+import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Bedtime
+import androidx.compose.material.icons.outlined.Cable
 import androidx.compose.material.icons.outlined.EmojiEvents
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Timeline
+import androidx.compose.material.icons.outlined.WaterDrop
 import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class Screen(
@@ -55,53 +63,69 @@ sealed class Screen(
         unselectedIcon = Icons.Outlined.Lock
     )
 
+    // 5 Primary Bottom Navigation Screens
     data object Home : Screen(
         route = "home",
-        title = "Home",
+        title = "HOME",
         selectedIcon = Icons.Filled.Home,
         unselectedIcon = Icons.Outlined.Home
     )
 
-    data object Progress : Screen(
-        route = "progress",
-        title = "Progress",
-        selectedIcon = Icons.Filled.Timeline,
-        unselectedIcon = Icons.Outlined.Timeline
+    data object Activity : Screen(
+        route = "activity",
+        title = "ACTIVITY",
+        selectedIcon = Icons.Filled.BarChart,
+        unselectedIcon = Icons.Outlined.BarChart
     )
 
-    data object Track : Screen(
-        route = "track",
-        title = "Track",
-        selectedIcon = Icons.Filled.AddCircle,
-        unselectedIcon = Icons.Outlined.AddCircleOutline
+    data object Sleep : Screen(
+        route = "sleep",
+        title = "SLEEP",
+        selectedIcon = Icons.Filled.Bedtime,
+        unselectedIcon = Icons.Outlined.Bedtime
     )
 
-    data object AiCoach : Screen(
-        route = "ai_coach",
-        title = "AI Coach",
+    data object Insights : Screen(
+        route = "insights",
+        title = "INSIGHTS",
         selectedIcon = Icons.Filled.Psychology,
         unselectedIcon = Icons.Outlined.Psychology
     )
 
     data object Profile : Screen(
         route = "profile",
-        title = "Profile",
+        title = "PROFILE",
         selectedIcon = Icons.Filled.Person,
         unselectedIcon = Icons.Outlined.Person
     )
 
-    data object Activity : Screen(
-        route = "activity",
-        title = "Activity",
-        selectedIcon = Icons.Filled.BarChart,
-        unselectedIcon = Icons.Outlined.BarChart
+    // Dedicated Sub-Screens
+    data object Heart : Screen(
+        route = "heart",
+        title = "Heart Rate",
+        selectedIcon = Icons.Filled.Favorite,
+        unselectedIcon = Icons.Outlined.FavoriteBorder
     )
 
-    data object Goals : Screen(
-        route = "goals",
-        title = "Goals",
-        selectedIcon = Icons.Filled.EmojiEvents,
-        unselectedIcon = Icons.Outlined.EmojiEvents
+    data object Hydration : Screen(
+        route = "hydration",
+        title = "Hydration",
+        selectedIcon = Icons.Filled.WaterDrop,
+        unselectedIcon = Icons.Outlined.WaterDrop
+    )
+
+    data object DataSources : Screen(
+        route = "data_sources",
+        title = "Data Sources",
+        selectedIcon = Icons.Filled.Cable,
+        unselectedIcon = Icons.Outlined.Cable
+    )
+
+    data object HealthConnectPermission : Screen(
+        route = "health_connect_permission",
+        title = "Connect Health Data",
+        selectedIcon = Icons.Filled.Cable,
+        unselectedIcon = Icons.Outlined.Cable
     )
 
     data object Settings : Screen(
@@ -156,12 +180,41 @@ sealed class Screen(
     data object HeartRateScanner : Screen(
         route = "heart_rate_scanner",
         title = "Pulse Scanner",
-        selectedIcon = Icons.Filled.BarChart,
-        unselectedIcon = Icons.Outlined.BarChart
+        selectedIcon = Icons.Filled.Favorite,
+        unselectedIcon = Icons.Outlined.FavoriteBorder
+    )
+
+    // Legacy Route Aliases
+    data object Progress : Screen(
+        route = "progress",
+        title = "Progress",
+        selectedIcon = Icons.Filled.Timeline,
+        unselectedIcon = Icons.Outlined.Timeline
+    )
+
+    data object Track : Screen(
+        route = "track",
+        title = "Track",
+        selectedIcon = Icons.Filled.AddCircle,
+        unselectedIcon = Icons.Outlined.AddCircleOutline
+    )
+
+    data object AiCoach : Screen(
+        route = "ai_coach",
+        title = "AI Coach",
+        selectedIcon = Icons.Filled.Psychology,
+        unselectedIcon = Icons.Outlined.Psychology
+    )
+
+    data object Goals : Screen(
+        route = "goals",
+        title = "Goals",
+        selectedIcon = Icons.Filled.EmojiEvents,
+        unselectedIcon = Icons.Outlined.EmojiEvents
     )
 
     companion object {
-        // 5 Primary Bottom Navigation Tabs
-        val bottomNavItems = listOf(Home, Progress, Track, AiCoach, Profile)
+        // 5 Primary Bottom Navigation Tabs as specified in prompt: HOME, ACTIVITY, SLEEP, INSIGHTS, PROFILE
+        val bottomNavItems = listOf(Home, Activity, Sleep, Insights, Profile)
     }
 }

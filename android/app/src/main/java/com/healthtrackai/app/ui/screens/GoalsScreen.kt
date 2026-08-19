@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.EmojiEvents
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -63,6 +65,7 @@ import com.healthtrackai.app.ui.theme.RoseAccent
 @Composable
 fun GoalsScreen(
     healthState: HealthStateHolder = remember { HealthStateHolder() },
+    onNavigateBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var showStepDialog by remember { mutableStateOf(false) }
@@ -81,7 +84,7 @@ fun GoalsScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         // Top Header
-        GoalsHeaderSection()
+        GoalsHeaderSection(onNavigateBack = onNavigateBack)
 
         // Content List
         LazyColumn(
@@ -201,20 +204,34 @@ fun GoalsScreen(
 }
 
 @Composable
-private fun GoalsHeaderSection() {
+private fun GoalsHeaderSection(onNavigateBack: (() -> Unit)? = null) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
-        Text(
-            text = "Health Goals",
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp
-            ),
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (onNavigateBack != null) {
+                IconButton(
+                    onClick = onNavigateBack,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            }
+            Text(
+                text = "Health Goals",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp
+                ),
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = "Track and conquer your personalized daily wellness milestones",

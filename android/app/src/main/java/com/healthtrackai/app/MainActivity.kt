@@ -12,27 +12,52 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
+import androidx.health.connect.client.PermissionController
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.healthtrackai.app.data.healthconnect.HealthConnectManager
+import com.healthtrackai.app.data.healthconnect.HealthConnectRepository
 import com.healthtrackai.app.data.models.HealthStateHolder
 import com.healthtrackai.app.data.sensors.StepSensorTracker
 import com.healthtrackai.app.ui.components.BottomNavigationBar
 import com.healthtrackai.app.ui.navigation.AppNavigation
 import com.healthtrackai.app.ui.navigation.Screen
 import com.healthtrackai.app.ui.theme.HealthTrackAITheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
+    private lateinit var healthConnectManager: HealthConnectManager
+    private lateinit var healthConnectRepository: HealthConnectRepository
+    private var sharedHealthState: HealthStateHolder? = null
+
+    // Health Connect Permission Launcher
+    private val healthConnectPermissionLauncher = registerForActivityResult(
+        PermissionController.createRequestPermissionResultContract()
+    ) { grantedPermissions ->
+        sharedHealthState?.let { state ->
+            lifecycleScopeLaunch {
+                healthConnectRepository.syncHealthData(state)
+            }
+        }
+    }
+
+    // Standard Hardware Sensor Permissions Launcher
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        // Sensor permissions callback
         val activityRecognitionGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             permissions[Manifest.permission.ACTIVITY_RECOGNITION] ?: false
         } else {
@@ -46,20 +71,45 @@ class MainActivity : ComponentActivity() {
             enableEdgeToEdge()
         } catch (e: Throwable) { }
 
+        healthConnectManager = HealthConnectManager(this)
+        healthConnectRepository = HealthConnectRepository(this, healthConnectManager)
+
         setContent {
             val context = LocalContext.current
             val healthState = remember { HealthStateHolder(context) }
+            sharedHealthState = healthState
             val stepTracker = remember { StepSensorTracker(context, healthState) }
             val reminderManager = remember { com.healthtrackai.app.data.notifications.SmartHealthReminderManager(context, healthState) }
+            val coroutineScope = rememberCoroutineScope()
+            val lifecycleOwner = LocalLifecycleOwner.current
 
-            DisposableEffect(Unit) {
+            // Automatic Sync on startup
+            LaunchedEffect(Unit) {
+                healthConnectRepository.syncHealthData(healthState)
+            }
+
+            // Automatic Sync when returning to application (ON_RESUME)
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        coroutineScope.launch {
+                            try {
+                                healthConnectRepository.syncHealthData(healthState)
+                            } catch (e: Throwable) { }
+                        }
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+
                 try {
                     stepTracker.startListening()
                 } catch (e: Throwable) { }
                 try {
                     reminderManager.syncLiveStepNotification()
                 } catch (e: Throwable) { }
+
                 onDispose {
+                    lifecycleOwner.lifecycle.removeObserver(observer)
                     try {
                         stepTracker.stopListening()
                     } catch (e: Throwable) { }
@@ -70,9 +120,38 @@ class MainActivity : ComponentActivity() {
                 MainAppScreen(
                     healthState = healthState,
                     stepTracker = stepTracker,
-                    onRequestPermissions = { requestSensorPermissions() }
+                    onRequestPermissions = { requestSensorPermissions() },
+                    onRequestHealthConnectPermissions = { requestHealthConnectPermissions() },
+                    onRefreshHealthConnect = {
+                        coroutineScope.launch {
+                            healthConnectRepository.syncHealthData(healthState)
+                        }
+                    }
                 )
             }
+        }
+    }
+
+    fun requestHealthConnectPermissions() {
+        try {
+            if (healthConnectManager.isHealthConnectAvailable()) {
+                healthConnectPermissionLauncher.launch(healthConnectManager.permissions)
+            } else {
+                val status = healthConnectManager.getSdkStatus()
+                if (status == com.healthtrackai.app.data.healthconnect.HealthConnectSdkStatus.PROVIDER_UPDATE_REQUIRED) {
+                    startActivity(healthConnectManager.getInstallOrUpdateIntent())
+                }
+            }
+        } catch (e: Throwable) {
+            // Gracefully handle devices where Health Connect launcher fails
+        }
+    }
+
+    private fun lifecycleScopeLaunch(block: suspend () -> Unit) {
+        lifecycleScope.launch {
+            try {
+                block()
+            } catch (e: Throwable) { }
         }
     }
 
@@ -133,13 +212,15 @@ class MainActivity : ComponentActivity() {
 fun MainAppScreen(
     healthState: HealthStateHolder = remember { HealthStateHolder() },
     stepTracker: StepSensorTracker? = null,
-    onRequestPermissions: () -> Unit = {}
+    onRequestPermissions: () -> Unit = {},
+    onRequestHealthConnectPermissions: () -> Unit = {},
+    onRefreshHealthConnect: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Show BottomNavigationBar on main dashboard tabs (Home, Activity, Goals, Profile)
+    // Show BottomNavigationBar on 5 primary tabs (Home, Activity, Sleep, Insights, Profile)
     val shouldShowBottomBar = currentRoute in Screen.bottomNavItems.map { it.route }
 
     Scaffold(
@@ -155,7 +236,9 @@ fun MainAppScreen(
             paddingValues = innerPadding,
             healthState = healthState,
             stepTracker = stepTracker,
-            onRequestPermissions = onRequestPermissions
+            onRequestPermissions = onRequestPermissions,
+            onRequestHealthConnectPermissions = onRequestHealthConnectPermissions,
+            onRefreshHealthConnect = onRefreshHealthConnect
         )
     }
 }

@@ -1,5 +1,7 @@
 package com.healthtrackai.app.ui.screens
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,350 +18,142 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Cable
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.MonitorWeight
-import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.healthtrackai.app.data.healthconnect.HealthConnectPermissionState
 import com.healthtrackai.app.data.models.HealthStateHolder
-import com.healthtrackai.app.ui.components.DailyActivityCard
-import com.healthtrackai.app.ui.components.DailyChallengeCard
-import com.healthtrackai.app.ui.components.HealthScoreHeroCard
-import com.healthtrackai.app.ui.components.HeartRateLoggerDialog
-import com.healthtrackai.app.ui.components.MetricGridSection
-import com.healthtrackai.app.ui.components.SleepLoggerDialog
-import com.healthtrackai.app.ui.components.StepLoggerDialog
-import com.healthtrackai.app.ui.components.TodaysPlanCard
-import com.healthtrackai.app.ui.components.WaterLoggerDialog
-import com.healthtrackai.app.ui.components.WeekDayStep
-import com.healthtrackai.app.ui.components.WeeklyActivityCard
-import com.healthtrackai.app.ui.components.WeightLoggerDialog
-import com.healthtrackai.app.ui.theme.AmberAccent
+import com.healthtrackai.app.data.services.HealthScoreBreakdown
+import com.healthtrackai.app.data.services.HealthScoreEngine
 import com.healthtrackai.app.ui.theme.CyanAccent
 import com.healthtrackai.app.ui.theme.EmeraldPrimary
 import com.healthtrackai.app.ui.theme.PurpleAccent
 import com.healthtrackai.app.ui.theme.RoseAccent
-import com.healthtrackai.app.data.sensors.StepSensorTracker
-import androidx.compose.material.icons.filled.Sensors
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-
-import com.healthtrackai.app.ui.components.ReportExportDialog
-import com.healthtrackai.app.ui.components.VoiceLoggerDialog
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.CameraAlt
+import java.time.LocalTime
 
 @Composable
 fun HomeScreen(
-    healthState: HealthStateHolder = remember { HealthStateHolder() },
-    stepTracker: StepSensorTracker? = null,
-    onRequestPermissions: () -> Unit = {},
+    healthState: HealthStateHolder,
     onNavigateToSettings: () -> Unit = {},
-    onNavigateToTrack: (String) -> Unit = {},
-    onNavigateToWalkSession: () -> Unit = {},
-    onNavigateToHeartRateScanner: () -> Unit = {},
-    onNavigateToChallenges: () -> Unit = {},
+    onNavigateToActivity: () -> Unit = {},
+    onNavigateToSleep: () -> Unit = {},
+    onNavigateToHeart: () -> Unit = {},
+    onNavigateToHydration: () -> Unit = {},
+    onNavigateToInsights: () -> Unit = {},
+    onNavigateToPermissions: () -> Unit = {},
+    onRefreshHealthConnect: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    // Dialog visibility states
-    var showStepDialog by remember { mutableStateOf(false) }
-    var showWaterDialog by remember { mutableStateOf(false) }
-    var showSleepDialog by remember { mutableStateOf(false) }
-    var showHeartDialog by remember { mutableStateOf(false) }
-    var showWeightDialog by remember { mutableStateOf(false) }
-    var showVoiceDialog by remember { mutableStateOf(false) }
-    var showReportDialog by remember { mutableStateOf(false) }
+    val greeting = when (LocalTime.now().hour) {
+        in 5..11 -> "GOOD MORNING 👋"
+        in 12..16 -> "GOOD AFTERNOON ☀️"
+        in 17..21 -> "GOOD EVENING 🌆"
+        else -> "HELLO THERE 🌙"
+    }
 
-    Box(modifier = modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+    val healthScore = healthState.currentHealthScoreResult ?: HealthScoreEngine.calculateScore(
+        healthState,
+        healthState.todayHealthRecord,
+        healthState.historical7Days
+    )
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Sticky Header / Greeting Top Section
+        HomeHeaderBar(
+            greeting = greeting,
+            userName = healthState.user.name,
+            lastSyncTime = healthState.lastHealthConnectSyncTime,
+            isSyncing = healthState.isSyncingHealthConnect,
+            onSettingsClick = onNavigateToSettings,
+            onRefreshClick = onRefreshHealthConnect
+        )
+
+        // Main Scrollable Dashboard Content
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 40.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            // Sticky Header / Greeting Top Section
-            HomeHeaderSection(
-                userName = healthState.user.name,
-                isGuestTrial = healthState.user.isGuestTrial,
-                onSettingsClick = onNavigateToSettings
-            )
-
-            // Main Scrollable Dashboard Content
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 80.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                // 1. Quick Metric Tap Bar
+            // Permission Notice Banner (if Health Connect permissions not granted)
+            if (healthState.healthConnectPermissionState != HealthConnectPermissionState.ALL_GRANTED) {
                 item {
-                    QuickMetricSelectorRow(
-                        onSelect = { metric ->
-                            when (metric) {
-                                "steps" -> showStepDialog = true
-                                "water" -> showWaterDialog = true
-                                "sleep" -> showSleepDialog = true
-                                "heart" -> showHeartDialog = true
-                                "weight" -> showWeightDialog = true
-                                "voice" -> showVoiceDialog = true
-                                "report" -> showReportDialog = true
-                                "scanner" -> onNavigateToHeartRateScanner()
-                            }
-                        }
+                    PermissionNoticeBanner(
+                        onGrantClick = onNavigateToPermissions
                     )
                 }
-
-            // 2. Large Circular Health Score Hero Card (Score 0-100, delta indicator, "Why is my score changing?")
-            item {
-                HealthScoreHeroCard(healthState = healthState)
             }
 
-            // 3. "Your Plan For Today" Interactive Checklist Card
+            // 1. Health Score Hero Card
             item {
-                TodaysPlanCard(
+                HealthScoreHeroBanner(
+                    score = healthScore,
+                    onClick = onNavigateToInsights
+                )
+            }
+
+            // 2. Main 2x2 Metric Grid (Steps, Distance, Calories, Active Minutes)
+            item {
+                DashboardMetricsGrid(
                     healthState = healthState,
-                    onNavigateToTrack = onNavigateToTrack
+                    onNavigateToActivity = onNavigateToActivity,
+                    onNavigateToHeart = onNavigateToHeart,
+                    onNavigateToSleep = onNavigateToSleep,
+                    onNavigateToHydration = onNavigateToHydration
                 )
             }
 
-            // 3.5 Live Motion Sensor & Pedometer Status Card
+            // 3. Workout & Activity Summary Card
             item {
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        if (healthState.isSensorActive) EmeraldPrimary.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .clickable(onClick = onNavigateToWalkSession)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
-                                    .background(EmeraldPrimary.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.DirectionsWalk,
-                                    contentDescription = null,
-                                    tint = EmeraldPrimary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "Direct Step Counter",
-                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = EmeraldPrimary.copy(alpha = 0.2f)
-                                    ) {
-                                        Text(
-                                            text = "LIVE",
-                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
-                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                color = EmeraldPrimary,
-                                                fontWeight = FontWeight.ExtraBold,
-                                                fontSize = 9.sp
-                                            )
-                                        )
-                                    }
-                                }
-                                Text(
-                                    text = if (healthState.sensorCadenceSpm > 0) {
-                                        "🟢 Tracking motion • ${healthState.sensorCadenceSpm} SPM"
-                                    } else {
-                                        "🟢 Hardware sensor active • Ready to walk"
-                                    },
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                )
-                            }
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = EmeraldPrimary
-                        ) {
-                            Text(
-                                text = "Start Walk ▶",
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 4. Daily Core Activity Card
-            item {
-                DailyActivityCard(
-                    currentSteps = healthState.currentSteps,
-                    stepGoal = healthState.stepGoal,
-                    distanceKm = healthState.distanceKm,
-                    caloriesBurned = healthState.caloriesBurned,
-                    activeMinutes = healthState.activeMinutes,
-                    onClick = { showStepDialog = true }
-                )
-            }
-
-            // 5. Grid of Vitals & Metric Cards (Water, Sleep, Heart, Weight)
-            item {
-                MetricGridSection(
-                    waterCurrentMl = healthState.currentWaterMl,
-                    waterGoalMl = healthState.waterGoalMl,
-                    sleepDurationFormatted = healthState.sleepDurationFormatted,
-                    sleepProgress = healthState.sleepProgress,
-                    heartRateBpm = healthState.heartRateBpm,
-                    weightKg = healthState.currentWeightKg.toString(),
-                    onWaterClick = { showWaterDialog = true },
-                    onSleepClick = { showSleepDialog = true },
-                    onHeartRateClick = { showHeartDialog = true },
-                    onWeightClick = { showWeightDialog = true }
-                )
-            }
-
-            // 6. Daily Challenge & Streak Card
-            item {
-                DailyChallengeCard(
+                WorkoutSummaryCard(
                     healthState = healthState,
-                    onNavigateToChallenges = onNavigateToChallenges
+                    onViewActivityClick = onNavigateToActivity
                 )
             }
 
-            // 7. Weekly Activity Trend Visualizer
+            // 4. AI Daily Summary Snippet Card
             item {
-                WeeklyActivityCard(
-                    weeklySteps = healthState.weeklyLogs.map { log ->
-                        WeekDayStep(day = log.day, steps = log.steps, isToday = log.isToday)
-                    },
-                    stepGoal = healthState.stepGoal
-                )
-            }
-        }
-    }
-
-    // Modal Interactive Dialogs
-    if (showStepDialog) {
-        StepLoggerDialog(
-            currentSteps = healthState.currentSteps,
-            stepGoal = healthState.stepGoal,
-            onDismiss = { showStepDialog = false },
-            onAddSteps = { amount -> healthState.addSteps(amount) }
-        )
-    }
-
-    if (showWaterDialog) {
-        WaterLoggerDialog(
-            currentMl = healthState.currentWaterMl,
-            goalMl = healthState.waterGoalMl,
-            onDismiss = { showWaterDialog = false },
-            onAddWater = { amount -> healthState.addWater(amount) }
-        )
-    }
-
-    if (showSleepDialog) {
-        SleepLoggerDialog(
-            currentHours = healthState.sleepHours,
-            goalHours = healthState.sleepGoalHours,
-            onDismiss = { showSleepDialog = false },
-            onSaveSleep = { hours -> healthState.setSleep(hours) }
-        )
-    }
-
-    if (showHeartDialog) {
-        HeartRateLoggerDialog(
-            currentBpm = healthState.heartRateBpm,
-            onDismiss = { showHeartDialog = false },
-            onSaveHeartRate = { bpm -> healthState.setHeartRate(bpm) }
-        )
-    }
-
-    if (showWeightDialog) {
-        WeightLoggerDialog(
-            currentWeightKg = healthState.currentWeightKg,
-            onDismiss = { showWeightDialog = false },
-            onSaveWeight = { kg -> healthState.setWeight(kg) }
-        )
-    }
-
-    if (showVoiceDialog) {
-        VoiceLoggerDialog(
-            healthState = healthState,
-            onDismiss = { showVoiceDialog = false }
-        )
-    }
-
-    if (showReportDialog) {
-        ReportExportDialog(
-            healthState = healthState,
-            onDismiss = { showReportDialog = false }
-        )
-    }
-
-        // Floating Voice AI Assistant Button
-        Surface(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = 24.dp)
-                .size(56.dp)
-                .clip(CircleShape)
-                .clickable { showVoiceDialog = true },
-            shape = CircleShape,
-            color = EmeraldPrimary,
-            shadowElevation = 8.dp
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Default.Mic,
-                    contentDescription = "Voice AI Logger",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
+                AiDailySummarySnippetCard(
+                    healthState = healthState,
+                    healthScore = healthScore,
+                    onViewInsightsClick = onNavigateToInsights
                 )
             }
         }
@@ -366,150 +161,685 @@ fun HomeScreen(
 }
 
 @Composable
-fun HomeHeaderSection(
+private fun HomeHeaderBar(
+    greeting: String,
     userName: String,
-    isGuestTrial: Boolean,
+    lastSyncTime: String,
+    isSyncing: Boolean,
     onSettingsClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onRefreshClick: () -> Unit
 ) {
-    val dateString = remember {
-        val formatter = SimpleDateFormat("EEEE, MMM d", Locale.getDefault())
-        formatter.format(Date())
-    }
-
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.background
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Good Morning, ${userName.ifBlank { "Alex" }} 👋",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    )
-                    if (isGuestTrial) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = AmberAccent.copy(alpha = 0.2f)
-                        ) {
-                            Text(
-                                text = "Trial",
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = AmberAccent,
-                                    fontSize = 10.sp
-                                )
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(2.dp))
+        Column {
+            Text(
+                text = greeting,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 12.sp,
+                    letterSpacing = 1.2.sp
+                ),
+                color = EmeraldPrimary
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = userName,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp
+                ),
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(if (isSyncing) CyanAccent else EmeraldPrimary)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = dateString,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Normal
-                    )
+                    text = if (isSyncing) "Syncing Health Connect..." else "Health Connect: $lastSyncTime",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
 
-            // Settings Button
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(
+                onClick = onRefreshClick,
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .clickable(onClick = onSettingsClick)
+                    .background(MaterialTheme.colorScheme.surface)
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                if (isSyncing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = EmeraldPrimary
+                    )
+                } else {
                     Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Settings",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Sync",
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(20.dp)
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun QuickMetricSelectorRow(
-    onSelect: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val items = listOf(
-        QuickMetricItem("voice", "Voice AI", Icons.Default.Mic, CyanAccent),
-        QuickMetricItem("scanner", "Pulse Scan", Icons.Default.Favorite, RoseAccent),
-        QuickMetricItem("report", "Report", Icons.Default.Description, EmeraldPrimary),
-        QuickMetricItem("steps", "Steps", Icons.Default.DirectionsWalk, EmeraldPrimary),
-        QuickMetricItem("water", "Water", Icons.Default.WaterDrop, CyanAccent),
-        QuickMetricItem("sleep", "Sleep", Icons.Default.Bedtime, PurpleAccent),
-        QuickMetricItem("weight", "Weight", Icons.Default.MonitorWeight, AmberAccent)
-    )
-
-    LazyRow(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        items(items.size) { index ->
-            val item = items[index]
-            Surface(
+            Spacer(modifier = Modifier.width(8.dp))
+            IconButton(
+                onClick = onSettingsClick,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .clickable { onSelect(item.id) },
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surface)
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(item.color.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = item.icon,
-                            contentDescription = item.label,
-                            tint = item.color,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = item.label,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings",
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
 }
 
-data class QuickMetricItem(
-    val id: String,
-    val label: String,
-    val icon: ImageVector,
-    val color: Color
-)
+@Composable
+private fun PermissionNoticeBanner(onGrantClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onGrantClick() },
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = EmeraldPrimary.copy(alpha = 0.12f))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Icon(
+                    imageVector = Icons.Default.Cable,
+                    contentDescription = null,
+                    tint = EmeraldPrimary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "Connect Health Data",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Grant Health Connect permissions to automatically sync your steps, sleep, & heart rate.",
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = EmeraldPrimary
+            ) {
+                Text(
+                    text = "Grant",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HealthScoreHeroBanner(
+    score: HealthScoreBreakdown,
+    onClick: () -> Unit
+) {
+    val tierColor = when (score.ratingTier) {
+        "Excellent" -> EmeraldPrimary
+        "Good" -> CyanAccent
+        else -> Color(0xFFFFA726)
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            EmeraldPrimary.copy(alpha = 0.18f),
+                            CyanAccent.copy(alpha = 0.08f),
+                            Color.Transparent
+                        )
+                    )
+                )
+                .padding(22.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "YOUR HEALTH SCORE",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                fontSize = 11.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text(
+                                text = "${score.overallScore}",
+                                style = MaterialTheme.typography.headlineLarge.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 44.sp
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = " / 100",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+                    }
+
+                    // Rating badge
+                    Column(horizontalAlignment = Alignment.End) {
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = tierColor.copy(alpha = 0.18f)
+                        ) {
+                            Text(
+                                text = score.ratingTier,
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = tierColor
+                                ),
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val deltaText = if (score.deltaFromYesterday >= 0) "+${score.deltaFromYesterday} pts vs yday" else "${score.deltaFromYesterday} pts vs yday"
+                        Text(
+                            text = deltaText,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = if (score.deltaFromYesterday >= 0) EmeraldPrimary else Color(0xFFFF7043)
+                        )
+                    }
+                }
+
+                // Explanation
+                Text(
+                    text = score.whyChangedExplanation,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DashboardMetricsGrid(
+    healthState: HealthStateHolder,
+    onNavigateToActivity: () -> Unit,
+    onNavigateToHeart: () -> Unit,
+    onNavigateToSleep: () -> Unit,
+    onNavigateToHydration: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Steps Card
+            MetricSquareCard(
+                title = "Steps",
+                value = String.format("%,d", healthState.currentSteps),
+                subtext = "Goal: ${String.format("%,d", healthState.stepGoal)}",
+                icon = Icons.Default.DirectionsWalk,
+                color = EmeraldPrimary,
+                progress = healthState.stepProgress,
+                modifier = Modifier.weight(1f),
+                onClick = onNavigateToActivity
+            )
+
+            // Sleep Card
+            MetricSquareCard(
+                title = "Sleep",
+                value = healthState.sleepDurationFormatted,
+                subtext = "Restorative Rest",
+                icon = Icons.Default.Bedtime,
+                color = PurpleAccent,
+                progress = healthState.sleepProgress,
+                modifier = Modifier.weight(1f),
+                onClick = onNavigateToSleep
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Distance Card
+            MetricSquareCard(
+                title = "Distance",
+                value = String.format("%.1f km", healthState.distanceKm),
+                subtext = "Active Movement",
+                icon = Icons.Default.DirectionsRun,
+                color = CyanAccent,
+                progress = (healthState.distanceKm / 8.0f).coerceIn(0f, 1f),
+                modifier = Modifier.weight(1f),
+                onClick = onNavigateToActivity
+            )
+
+            // Calories Card
+            MetricSquareCard(
+                title = "Calories",
+                value = "${healthState.caloriesBurned} kcal",
+                subtext = "Active Burn",
+                icon = Icons.Default.LocalFireDepartment,
+                color = RoseAccent,
+                progress = (healthState.caloriesBurned / 600f).coerceIn(0f, 1f),
+                modifier = Modifier.weight(1f),
+                onClick = onNavigateToActivity
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Heart Rate Card
+            val hrVal = if (healthState.heartRateBpm.isNotBlank() && healthState.heartRateBpm != "--") "${healthState.heartRateBpm} BPM" else "Not available"
+            MetricSquareCard(
+                title = "Heart Rate",
+                value = hrVal,
+                subtext = "Resting Pulse",
+                icon = Icons.Default.Favorite,
+                color = RoseAccent,
+                progress = null,
+                modifier = Modifier.weight(1f),
+                onClick = onNavigateToHeart
+            )
+
+            // Activity / Active Minutes Card
+            MetricSquareCard(
+                title = "Activity",
+                value = "${healthState.activeMinutes} min",
+                subtext = "Goal: ${healthState.activeMinutesGoal}m",
+                icon = Icons.Default.BarChart,
+                color = CyanAccent,
+                progress = (healthState.activeMinutes.toFloat() / healthState.activeMinutesGoal.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f),
+                modifier = Modifier.weight(1f),
+                onClick = onNavigateToActivity
+            )
+        }
+
+        // Hydration Card (Full Width)
+        val waterVal = if (healthState.isHydrationSourceConnected && healthState.currentWaterMl > 0)
+            String.format("%.1f L", healthState.currentWaterMl / 1000f)
+        else
+            "Not available"
+
+        MetricHorizontalCard(
+            title = "Hydration",
+            value = waterVal,
+            subtext = if (healthState.isHydrationSourceConnected) "Target: 2.5 L" else "No connected health source",
+            icon = Icons.Default.WaterDrop,
+            color = CyanAccent,
+            onClick = onNavigateToHydration
+        )
+    }
+}
+
+@Composable
+private fun MetricSquareCard(
+    title: String,
+    value: String,
+    subtext: String,
+    icon: ImageVector,
+    color: Color,
+    progress: Float?,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .height(138.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = color.copy(alpha = 0.15f),
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = color,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 11.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Column {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtext,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (progress != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(progress)
+                            .fillMaxHeight()
+                            .clip(CircleShape)
+                            .background(color)
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun MetricHorizontalCard(
+    title: String,
+    value: String,
+    subtext: String,
+    icon: ImageVector,
+    color: Color,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = CircleShape,
+                    color = color.copy(alpha = 0.15f),
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = color,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            Text(
+                text = subtext,
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun WorkoutSummaryCard(
+    healthState: HealthStateHolder,
+    onViewActivityClick: () -> Unit
+) {
+    val workouts = healthState.healthConnectWorkouts
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onViewActivityClick() },
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.FitnessCenter,
+                        contentDescription = null,
+                        tint = EmeraldPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Today's Workouts",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Text(
+                    text = if (workouts.isNotEmpty()) "${workouts.size} Sessions" else "No sessions yet",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = EmeraldPrimary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                )
+            }
+
+            if (workouts.isNotEmpty()) {
+                workouts.take(2).forEach { workout ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = workout.iconEmoji, fontSize = 20.sp)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = workout.title,
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "${workout.durationMinutes} min • ${workout.sourceName}",
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                Text(
+                    text = "Tracked runs, walks, or gym sessions synced via Health Connect will appear here automatically.",
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AiDailySummarySnippetCard(
+    healthState: HealthStateHolder,
+    healthScore: HealthScoreBreakdown,
+    onViewInsightsClick: () -> Unit
+) {
+    val dailySummary = healthState.todayAiDailySummary
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onViewInsightsClick() },
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            PurpleAccent.copy(alpha = 0.12f),
+                            CyanAccent.copy(alpha = 0.08f)
+                        )
+                    )
+                )
+                .padding(18.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = PurpleAccent,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "AI DAILY INSIGHT",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                color = PurpleAccent
+                            )
+                        )
+                    }
+
+                    Text(
+                        text = "View Insights →",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = PurpleAccent
+                        )
+                    )
+                }
+
+                Text(
+                    text = dailySummary?.aiInsight ?: "Your activity level is good today and your sleep duration is close to your recent average.",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+    }
+}

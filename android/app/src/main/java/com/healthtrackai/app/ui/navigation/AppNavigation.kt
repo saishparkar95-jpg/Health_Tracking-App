@@ -12,26 +12,32 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.healthtrackai.app.data.models.HealthStateHolder
+import com.healthtrackai.app.data.sensors.StepSensorTracker
 import com.healthtrackai.app.ui.screens.AchievementsScreen
 import com.healthtrackai.app.ui.screens.ActivityScreen
 import com.healthtrackai.app.ui.screens.AiCoachScreen
 import com.healthtrackai.app.ui.screens.AuthScreen
 import com.healthtrackai.app.ui.screens.ChallengesScreen
+import com.healthtrackai.app.ui.screens.DataSourceScreen
 import com.healthtrackai.app.ui.screens.ExerciseScreen
 import com.healthtrackai.app.ui.screens.FoodScannerScreen
 import com.healthtrackai.app.ui.screens.GoalsScreen
+import com.healthtrackai.app.ui.screens.HealthConnectPermissionScreen
+import com.healthtrackai.app.ui.screens.HeartRateScannerScreen
+import com.healthtrackai.app.ui.screens.HeartScreen
 import com.healthtrackai.app.ui.screens.HomeScreen
+import com.healthtrackai.app.ui.screens.HydrationScreen
+import com.healthtrackai.app.ui.screens.InsightsScreen
 import com.healthtrackai.app.ui.screens.MoodScreen
 import com.healthtrackai.app.ui.screens.OnboardingScreen
 import com.healthtrackai.app.ui.screens.ProfileScreen
 import com.healthtrackai.app.ui.screens.ProfileSetupScreen
 import com.healthtrackai.app.ui.screens.ProgressScreen
 import com.healthtrackai.app.ui.screens.SettingsScreen
+import com.healthtrackai.app.ui.screens.SleepScreen
 import com.healthtrackai.app.ui.screens.SplashScreen
 import com.healthtrackai.app.ui.screens.TrackScreen
 import com.healthtrackai.app.ui.screens.WalkSessionScreen
-
-import com.healthtrackai.app.data.sensors.StepSensorTracker
 
 @Composable
 fun AppNavigation(
@@ -40,6 +46,8 @@ fun AppNavigation(
     healthState: HealthStateHolder = remember { HealthStateHolder() },
     stepTracker: StepSensorTracker? = null,
     onRequestPermissions: () -> Unit = {},
+    onRequestHealthConnectPermissions: () -> Unit = {},
+    onRefreshHealthConnect: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -128,40 +136,175 @@ fun AppNavigation(
             )
         }
 
-        // 5. Main Dashboard (Home)
+        // 5. Main Dashboard (HOME)
         composable(Screen.Home.route) {
             HomeScreen(
                 healthState = healthState,
-                stepTracker = stepTracker,
-                onRequestPermissions = onRequestPermissions,
-                onNavigateToSettings = {
-                    navController.navigate(Screen.Settings.route)
-                },
-                onNavigateToTrack = { _ ->
-                    navController.navigate(Screen.Track.route) {
-                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                onNavigateToWalkSession = {
-                    navController.navigate(Screen.WalkSession.route)
-                },
-                onNavigateToHeartRateScanner = {
-                    navController.navigate(Screen.HeartRateScanner.route)
-                },
-                onNavigateToChallenges = {
-                    navController.navigate(Screen.Challenges.route)
-                }
+                onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                onNavigateToActivity = { navController.navigate(Screen.Activity.route) },
+                onNavigateToSleep = { navController.navigate(Screen.Sleep.route) },
+                onNavigateToHeart = { navController.navigate(Screen.Heart.route) },
+                onNavigateToHydration = { navController.navigate(Screen.Hydration.route) },
+                onNavigateToInsights = { navController.navigate(Screen.Insights.route) },
+                onNavigateToPermissions = { navController.navigate(Screen.HealthConnectPermission.route) },
+                onRefreshHealthConnect = onRefreshHealthConnect
             )
         }
 
-        // 6. Progress & Trends Screen
+        // 6. ACTIVITY Screen
+        composable(Screen.Activity.route) {
+            ActivityScreen(
+                healthState = healthState,
+                onNavigateBack = { navController.popBackStack() },
+                onRefresh = onRefreshHealthConnect
+            )
+        }
+
+        // 7. SLEEP Screen
+        composable(Screen.Sleep.route) {
+            SleepScreen(
+                healthState = healthState,
+                onNavigateBack = { navController.popBackStack() },
+                onRefresh = onRefreshHealthConnect
+            )
+        }
+
+        // 8. INSIGHTS Screen (AI Coach + Daily Summary + Weekly Report)
+        composable(Screen.Insights.route) {
+            InsightsScreen(
+                healthState = healthState
+            )
+        }
+
+        // 9. PROFILE Screen
+        composable(Screen.Profile.route) {
+            ProfileScreen(
+                healthState = healthState,
+                onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                onNavigateToDataSources = { navController.navigate(Screen.DataSources.route) },
+                onNavigateToPermissions = { navController.navigate(Screen.HealthConnectPermission.route) },
+                onNavigateToGoals = { navController.navigate(Screen.Goals.route) },
+                onRefreshHealthConnect = onRefreshHealthConnect,
+                onNavigateToAuth = { navController.navigate(Screen.Auth.route) }
+            )
+        }
+
+        // 10. HEART Screen
+        composable(Screen.Heart.route) {
+            HeartScreen(
+                healthState = healthState,
+                onNavigateBack = { navController.popBackStack() },
+                onRefresh = onRefreshHealthConnect
+            )
+        }
+
+        // 11. HYDRATION Screen
+        composable(Screen.Hydration.route) {
+            HydrationScreen(
+                healthState = healthState,
+                onNavigateBack = { navController.popBackStack() },
+                onRefresh = onRefreshHealthConnect
+            )
+        }
+
+        // 12. DATA SOURCES Screen
+        composable(Screen.DataSources.route) {
+            DataSourceScreen(
+                healthState = healthState,
+                onNavigateBack = { navController.popBackStack() },
+                onRefresh = onRefreshHealthConnect,
+                onNavigateToPermissions = { navController.navigate(Screen.HealthConnectPermission.route) }
+            )
+        }
+
+        // 13. HEALTH CONNECT PERMISSION ONBOARDING Screen
+        composable(Screen.HealthConnectPermission.route) {
+            HealthConnectPermissionScreen(
+                healthState = healthState,
+                onRequestHealthConnectPermissions = onRequestHealthConnectPermissions,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // 14. Settings Screen
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                healthState = healthState,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToAuth = { navController.navigate(Screen.Auth.route) }
+            )
+        }
+
+        // 15. Goals Screen
+        composable(Screen.Goals.route) {
+            GoalsScreen(
+                healthState = healthState,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // 16. Exercise Tracker Screen
+        composable(Screen.Exercise.route) {
+            ExerciseScreen(
+                healthState = healthState,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // 17. Mood Tracker Screen
+        composable(Screen.Mood.route) {
+            MoodScreen(
+                healthState = healthState,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // 18. Food Scanner Screen
+        composable(Screen.FoodScanner.route) {
+            FoodScannerScreen(
+                healthState = healthState,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // 19. Walk Session Screen
+        composable(Screen.WalkSession.route) {
+            WalkSessionScreen(
+                healthState = healthState,
+                stepTracker = stepTracker,
+                onRequestPermissions = onRequestPermissions,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // 20. Challenges Screen
+        composable(Screen.Challenges.route) {
+            ChallengesScreen(
+                healthState = healthState,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // 21. Achievements Screen
+        composable(Screen.Achievements.route) {
+            AchievementsScreen(
+                healthState = healthState,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // 22. Camera Pulse Scanner Screen
+        composable(Screen.HeartRateScanner.route) {
+            HeartRateScannerScreen(
+                healthState = healthState,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // Legacy compatibility routes
         composable(Screen.Progress.route) {
             ProgressScreen(healthState = healthState)
         }
-
-        // 7. Track Hub Screen
         composable(Screen.Track.route) {
             TrackScreen(
                 healthState = healthState,
@@ -172,102 +315,8 @@ fun AppNavigation(
                 onNavigateToMood = { navController.navigate(Screen.Mood.route) }
             )
         }
-
-        // 8. AI Coach Screen
         composable(Screen.AiCoach.route) {
             AiCoachScreen(healthState = healthState)
-        }
-
-        // 9. Profile Screen
-        composable(Screen.Profile.route) {
-            ProfileScreen(
-                healthState = healthState,
-                onNavigateToSettings = {
-                    navController.navigate(Screen.Settings.route)
-                },
-                onNavigateToAuth = {
-                    navController.navigate(Screen.Auth.route)
-                }
-            )
-        }
-
-        // 10. Settings Screen
-        composable(Screen.Settings.route) {
-            SettingsScreen(
-                healthState = healthState,
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
-                onNavigateToAuth = {
-                    navController.navigate(Screen.Auth.route)
-                }
-            )
-        }
-
-        // 11. Exercise Tracker Screen
-        composable(Screen.Exercise.route) {
-            ExerciseScreen(
-                healthState = healthState,
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        // 12. Mood Tracker Screen
-        composable(Screen.Mood.route) {
-            MoodScreen(
-                healthState = healthState,
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        // 13. Food Scanner Screen
-        composable(Screen.FoodScanner.route) {
-            FoodScannerScreen(
-                healthState = healthState,
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        // 14. Walk Session Screen
-        composable(Screen.WalkSession.route) {
-            WalkSessionScreen(
-                healthState = healthState,
-                stepTracker = stepTracker,
-                onRequestPermissions = onRequestPermissions,
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        // 15. Challenges Screen
-        composable(Screen.Challenges.route) {
-            ChallengesScreen(
-                healthState = healthState,
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        // 16. Achievements Screen
-        composable(Screen.Achievements.route) {
-            AchievementsScreen(
-                healthState = healthState,
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        // 17. Camera PPG Heart Rate Scanner Screen
-        composable(Screen.HeartRateScanner.route) {
-            com.healthtrackai.app.ui.screens.HeartRateScannerScreen(
-                healthState = healthState,
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        // Legacy compatibility routes
-        composable(Screen.Activity.route) {
-            ActivityScreen(healthState = healthState)
-        }
-        composable(Screen.Goals.route) {
-            GoalsScreen(healthState = healthState)
         }
     }
 }

@@ -148,6 +148,27 @@ class HealthStateHolder(context: Context? = null) {
     var goalReminders by mutableStateOf(true)
     var challengeNotifications by mutableStateOf(true)
 
+    // Health Connect Synchronization State
+    var healthConnectSdkStatus by mutableStateOf(com.healthtrackai.app.data.healthconnect.HealthConnectSdkStatus.CHECKING)
+    var healthConnectPermissionState by mutableStateOf(com.healthtrackai.app.data.healthconnect.HealthConnectPermissionState.CHECKING)
+    var isSyncingHealthConnect by mutableStateOf(false)
+    var lastHealthConnectSyncTime by mutableStateOf("Just now")
+    var healthConnectErrorMessage by mutableStateOf<String?>(null)
+    var isHydrationSourceConnected by mutableStateOf(false)
+
+    // Live Health Connect Record models
+    var todayHealthRecord by mutableStateOf<com.healthtrackai.app.data.healthconnect.DailyHealthRecord?>(null)
+    var latestSleepSession by mutableStateOf<com.healthtrackai.app.data.healthconnect.SleepSessionData?>(null)
+    var latestHeartRateSummary by mutableStateOf<com.healthtrackai.app.data.healthconnect.HeartRateSummary?>(null)
+    val healthConnectWorkouts = mutableStateListOf<com.healthtrackai.app.data.healthconnect.ExerciseRecordItem>()
+    val historical7Days = mutableStateListOf<com.healthtrackai.app.data.healthconnect.DailyHealthRecord>()
+    val connectedDataSources = mutableStateListOf<com.healthtrackai.app.data.healthconnect.MetricSourceInfo>()
+
+    // Calculated Health Score & AI Summaries
+    var currentHealthScoreResult by mutableStateOf<com.healthtrackai.app.data.services.HealthScoreBreakdown?>(null)
+    var todayAiDailySummary by mutableStateOf<com.healthtrackai.app.data.services.AiDailySummaryData?>(null)
+    var weeklyAiReport by mutableStateOf<com.healthtrackai.app.data.services.WeeklyHealthReportData?>(null)
+
     // Daily Steps & Activity (starts from 0 for fresh accounts / fresh days)
     var currentSteps by mutableIntStateOf(appPreferences?.todaySteps ?: 0)
     var stepGoal by mutableIntStateOf(appPreferences?.stepGoal ?: 10000)
